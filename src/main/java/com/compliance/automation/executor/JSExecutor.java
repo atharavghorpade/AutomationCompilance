@@ -1,10 +1,12 @@
 package com.compliance.automation.executor;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import com.compliance.automation.model.Result;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
@@ -38,8 +40,8 @@ public class JSExecutor {
                 return new Result(ruleId, STATUS_MISSING_FUNCTION, "Missing executable check(config) function", -1);
             }
 
-            ProxyObject configObject = ProxyObject.fromMap(parseConfig(config));
-            Value executionResult = checkFunction.execute(configObject);
+            Value configValue = parseAndConvertConfig(context, config);
+            Value executionResult = checkFunction.execute(configValue);
 
             return new Result(
                     ruleId,
@@ -62,6 +64,22 @@ public class JSExecutor {
             });
         } catch (IOException exception) {
             throw new IllegalArgumentException("Config must be valid JSON", exception);
+        }
+    }
+
+    private Value parseAndConvertConfig(Context context, String config) {
+        try {
+            JsonNode jsonNode = objectMapper.readTree(config);
+            
+            if (jsonNode.isArray()) {
+                return context.eval("js", "(" + config + ")");
+            } else if (jsonNode.isObject()) {
+                return context.eval("js", "(" + config + ")");
+            } else {
+                throw new IllegalArgumentException("Config must be a JSON object or array");
+            }
+        } catch (IOException exception) {
+            throw new IllegalArgumentException("Config must be valid JSON: " + exception.getMessage(), exception);
         }
     }
 

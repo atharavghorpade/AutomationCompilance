@@ -2,9 +2,12 @@ package com.compliance.automation.controller;
 
 import com.compliance.automation.model.ExpectedResult;
 import com.compliance.automation.model.Report;
+import com.compliance.automation.loader.ExpectedResultLoader;
+import com.compliance.automation.loader.ExpectedResultLoaderException;
 import com.compliance.automation.orchestrator.ComplianceOrchestrator;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,11 +24,11 @@ import java.util.List;
 public class ComplianceController {
 
     private final ComplianceOrchestrator complianceOrchestrator;
-    private final ObjectMapper objectMapper;
+    private final ExpectedResultLoader expectedResultLoader;
 
-    public ComplianceController(ComplianceOrchestrator complianceOrchestrator, ObjectMapper objectMapper) {
+    public ComplianceController(ComplianceOrchestrator complianceOrchestrator, ExpectedResultLoader expectedResultLoader) {
         this.complianceOrchestrator = complianceOrchestrator;
-        this.objectMapper = objectMapper;
+        this.expectedResultLoader = expectedResultLoader;
     }
 
     @PostMapping("/run")
@@ -39,19 +42,15 @@ public class ComplianceController {
             @RequestParam("configFile") MultipartFile configFile,
             @RequestParam("expectedFile") MultipartFile expectedFile,
             @RequestParam("type") String type) throws IOException {
-        
-        // Convert configFile to String
-        String config = new String(configFile.getBytes(), StandardCharsets.UTF_8);
-        
-        // Parse expectedFile as JSON to List<ExpectedResult>
-        List<ExpectedResult> expectedResults = objectMapper.readValue(
-                expectedFile.getInputStream(),
-                objectMapper.getTypeFactory().constructCollectionType(List.class, ExpectedResult.class)
-        );
-        
-        // Pass both to ComplianceOrchestrator
+        String config = configFile == null ? "" : new String(configFile.getBytes(), StandardCharsets.UTF_8);
+        List<ExpectedResult> expectedResults = expectedResultLoader.load(expectedFile);
         Report report = complianceOrchestrator.runCompliance(config, expectedResults);
         return ResponseEntity.ok(report);
+    }
+
+    @ExceptionHandler(ExpectedResultLoaderException.class)
+    public ResponseEntity<String> handleExpectedResultLoaderException(ExpectedResultLoaderException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 
     public record RunRequest(String config, String type) {

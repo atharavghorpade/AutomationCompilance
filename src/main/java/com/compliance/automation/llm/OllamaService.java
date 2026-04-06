@@ -58,6 +58,22 @@ Do not explain.
         }
     }
 
+    public String generateCheckFunctionWithPrompt(String customPrompt) {
+        String fullUrl = ollamaUrl + "/api/generate";
+
+        Map<String, Object> request = new HashMap<>();
+        request.put("model", MODEL);
+        request.put("prompt", customPrompt);
+        request.put("stream", false);
+
+        try {
+            String response = restTemplate.postForObject(fullUrl, request, String.class);
+            return extractGeneratedText(response);
+        } catch (Exception exception) {
+            throw new RuntimeException("Failed to generate JS from Ollama: " + exception.getMessage(), exception);
+        }
+    }
+
     private String extractGeneratedText(String response) {
         try {
             JsonNode root = objectMapper.readTree(response);

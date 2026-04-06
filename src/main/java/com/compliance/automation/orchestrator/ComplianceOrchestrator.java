@@ -47,14 +47,16 @@ public class ComplianceOrchestrator {
 		this.fileStorageService = fileStorageService;
 	}
 
-	public Report runCompliance(String config) {
+	public Report runCompliance(String config, List<ExpectedResult> providedExpectedResults) {
 		List<Rule> rules = metadataExtractor.extractRulesFromFile(null);
 
 		Map<String, String> jsByRuleId = jsGeneratorService.generateCheckFunctions(rules);
 		saveGeneratedJavaScript(jsByRuleId);
 
 		List<Result> results = executeRules(jsByRuleId, config);
-		List<ExpectedResult> expectedResults = buildExpectedResults(rules, config);
+		List<ExpectedResult> expectedResults = providedExpectedResults != null 
+			? providedExpectedResults 
+			: buildExpectedResults(rules, config);
 
 		ValidationResult validationResult = validationService.validate(results, expectedResults);
 		if (!validationResult.isMatched()) {

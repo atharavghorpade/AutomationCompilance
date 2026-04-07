@@ -33,7 +33,7 @@ public class ComplianceController {
 
     @PostMapping("/run")
     public ResponseEntity<Report> run(@RequestBody RunRequest request) {
-        Report report = complianceOrchestrator.runCompliance(request.config(), null);
+        Report report = complianceOrchestrator.runCompliance(request.config(), List.of());
         return ResponseEntity.ok(report);
     }
 

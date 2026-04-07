@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.compliance.automation.executor.JSExecutor;
 import com.compliance.automation.generator.JSGeneratorService;
@@ -47,23 +48,24 @@ public class ComplianceOrchestrator {
 		this.fileStorageService = fileStorageService;
 	}
 
-	public Report runCompliance(String config, List<ExpectedResult> providedExpectedResults) {
+	public Report runCompliance(String config, List<ExpectedResult> expectedResults) {
+		String safeConfig = config == null ? "" : config;
+		List<ExpectedResult> safeExpectedResults = Objects.requireNonNull(expectedResults,
+				"expectedResults must not be null");
+
 		List<Rule> rules = metadataExtractor.extractRulesFromFile(null);
 
 		Map<String, String> jsByRuleId = jsGeneratorService.generateCheckFunctions(rules);
 		saveGeneratedJavaScript(jsByRuleId);
 
-		List<Result> results = executeRules(jsByRuleId, config);
-		List<ExpectedResult> expectedResults = providedExpectedResults != null 
-			? providedExpectedResults 
-			: buildExpectedResults(rules, config);
+		List<Result> results = executeRules(jsByRuleId, safeConfig);
 
-		ValidationResult validationResult = validationService.validate(results, expectedResults);
+		ValidationResult validationResult = validationService.validate(results, safeExpectedResults);
 		if (!validationResult.isMatched()) {
 			Map<String, String> expectedCommandByRuleId = mapExpectedCommandsByRuleId(rules);
 			List<Result> retriedResults = retryEngine.retryFailedRules(
 					validationResult.getFailedRuleIds(),
-					config,
+					safeConfig,
 					expectedCommandByRuleId);
 			mergeRetryResults(results, retriedResults);
 		}
@@ -78,21 +80,6 @@ public class ComplianceOrchestrator {
 			results.add(result);
 		}
 		return results;
-	}
-
-	private List<ExpectedResult> buildExpectedResults(List<Rule> rules, String config) {
-		List<ExpectedResult> expectedResults = new ArrayList<>();
-		String safeConfig = config == null ? "" : config;
-
-		for (Rule rule : rules) {
-			boolean commandPresent = safeConfig.contains(rule.getExpectedCommand());
-			expectedResults.add(new ExpectedResult(
-					rule.getRuleId(),
-					commandPresent ? "PASS" : "FAIL",
-					commandPresent ? 1 : -1));
-		}
-
-		return expectedResults;
 	}
 
 	private Map<String, String> mapExpectedCommandsByRuleId(List<Rule> rules) {

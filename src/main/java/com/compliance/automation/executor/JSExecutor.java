@@ -1,17 +1,13 @@
 package com.compliance.automation.executor;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 import com.compliance.automation.model.Result;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.proxy.ProxyObject;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -55,15 +51,6 @@ public class JSExecutor {
             return new Result(ruleId, STATUS_RUNTIME_ERROR, exception.getMessage(), -1);
         } catch (IllegalArgumentException exception) {
             return new Result(ruleId, STATUS_INVALID_CONFIG, exception.getMessage(), -1);
-        }
-    }
-
-    private Map<String, Object> parseConfig(String config) {
-        try {
-            return objectMapper.readValue(config, new TypeReference<Map<String, Object>>() {
-            });
-        } catch (IOException exception) {
-            throw new IllegalArgumentException("Config must be valid JSON", exception);
         }
     }
 

@@ -14,8 +14,10 @@ public class FileStorageService {
 	private static final String JS_OUTPUT_DIR = "output/js";
 	private static final String REPORT_OUTPUT_DIR = "output/reports";
 
-	public Path saveJavaScript(String fileName, String jsCode) {
-		return saveFile(JS_OUTPUT_DIR, fileName, jsCode);
+	public Path saveJavaScript(String ruleId, String jsCode) {
+		String fileName = ruleId + ".js";
+		String formattedJsCode = formatJavaScriptCode(jsCode);
+		return saveFile(JS_OUTPUT_DIR, fileName, formattedJsCode);
 	}
 
 	public Path saveReport(String fileName, String reportContent) {
@@ -33,5 +35,22 @@ public class FileStorageService {
 		} catch (IOException exception) {
 			throw new RuntimeException("Failed to save file: " + fileName, exception);
 		}
+	}
+
+	private String formatJavaScriptCode(String jsCode) {
+		if (jsCode == null) {
+			return "";
+		}
+
+		String normalized = jsCode
+				.replace("\r\n", "\n")
+				.replace("\r", "\n")
+				.trim();
+
+		if (normalized.isEmpty()) {
+			return "";
+		}
+
+		return normalized + System.lineSeparator();
 	}
 }

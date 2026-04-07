@@ -107,8 +107,7 @@ public class ComplianceOrchestrator {
 
 	private void saveGeneratedJavaScript(Map<String, String> jsByRuleId) {
 		for (Map.Entry<String, String> entry : jsByRuleId.entrySet()) {
-			String fileName = entry.getKey().replace('.', '_') + ".js";
-			fileStorageService.saveJavaScript(fileName, entry.getValue());
+			fileStorageService.saveJavaScript(entry.getKey(), entry.getValue());
 		}
 	}
 }

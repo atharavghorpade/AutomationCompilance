@@ -1,6 +1,7 @@
 package com.compliance.automation.model;
 
 import java.util.List;
+import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,4 +14,5 @@ public class ValidationResult {
 
     private boolean matched;
     private List<String> failedRuleIds;
+    private Map<String, String> mismatchReasons;
 }

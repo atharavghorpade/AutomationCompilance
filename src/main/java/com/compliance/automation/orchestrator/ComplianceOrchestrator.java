@@ -70,7 +70,7 @@ public class ComplianceOrchestrator {
 			mergeRetryResults(results, retriedResults);
 		}
 
-		return reportGenerator.generateReport(results);
+		return reportGenerator.generateReport(results, safeExpectedResults);
 	}
 
 	private List<Result> executeRules(Map<String, String> jsByRuleId, String config) {

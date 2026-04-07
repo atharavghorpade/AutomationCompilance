@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Report {
 
-    private List<Result> results;
+    private List<RuleReport> results;
     private int total;
     private int passed;
     private int failed;

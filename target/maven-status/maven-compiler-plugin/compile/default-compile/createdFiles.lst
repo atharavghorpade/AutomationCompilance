@@ -5,7 +5,6 @@ com\compliance\automation\formatter\CISFormatter.class
 com\compliance\automation\model\ValidationResult.class
 com\compliance\automation\retry\RetryEngine.class
 com\compliance\automation\controller\TestController.class
-com\compliance\automation\executor\JSExecutor$1.class
 com\compliance\automation\config\HttpClientConfig.class
 com\compliance\automation\generator\JSGeneratorService.class
 com\compliance\automation\ComplianceAutomationApplication.class

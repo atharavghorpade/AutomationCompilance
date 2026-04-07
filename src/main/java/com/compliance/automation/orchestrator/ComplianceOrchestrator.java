@@ -62,11 +62,11 @@ public class ComplianceOrchestrator {
 
 		ValidationResult validationResult = validationService.validate(results, safeExpectedResults);
 		if (!validationResult.isMatched()) {
-			Map<String, String> expectedCommandByRuleId = mapExpectedCommandsByRuleId(rules);
+			Map<String, ExpectedResult> expectedByRuleId = mapExpectedByRuleId(safeExpectedResults);
 			List<Result> retriedResults = retryEngine.retryFailedRules(
 					validationResult.getFailedRuleIds(),
 					safeConfig,
-					expectedCommandByRuleId);
+					expectedByRuleId);
 			mergeRetryResults(results, retriedResults);
 		}
 
@@ -82,12 +82,12 @@ public class ComplianceOrchestrator {
 		return results;
 	}
 
-	private Map<String, String> mapExpectedCommandsByRuleId(List<Rule> rules) {
-		Map<String, String> expectedCommandByRuleId = new HashMap<>();
-		for (Rule rule : rules) {
-			expectedCommandByRuleId.put(rule.getRuleId(), rule.getExpectedCommand());
+	private Map<String, ExpectedResult> mapExpectedByRuleId(List<ExpectedResult> expectedResults) {
+		Map<String, ExpectedResult> expectedByRuleId = new HashMap<>();
+		for (ExpectedResult expectedResult : expectedResults) {
+			expectedByRuleId.put(expectedResult.getRuleId(), expectedResult);
 		}
-		return expectedCommandByRuleId;
+		return expectedByRuleId;
 	}
 
 	private void mergeRetryResults(List<Result> originalResults, List<Result> retryResults) {

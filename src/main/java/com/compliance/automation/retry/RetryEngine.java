@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.compliance.automation.executor.JSExecutor;
 import com.compliance.automation.llm.OllamaService;
+import com.compliance.automation.model.ExpectedResult;
 import com.compliance.automation.model.Result;
 import org.springframework.stereotype.Service;
 
@@ -13,8 +14,13 @@ import org.springframework.stereotype.Service;
 public class RetryEngine {
 
     private static final int MAX_RETRIES = 2;
-    private static final String IMPROVED_PROMPT = """
-Previous result was wrong. Fix logic.
+        private static final String IMPROVED_PROMPT = """
+Previous output was incorrect.
+Expected:
+- status: %s
+- lineNumber: %d
+
+Fix the logic.
 
 Generate JavaScript function.
 
@@ -22,10 +28,7 @@ Rules:
 - Function name: check(config)
 - Input: config (string)
 - Output:
-  { status: "PASS" | "FAIL", evidence: string, lineNumber: number }
-
-Check if config contains:
-"%s"
+    { status: "PASS" | "FAIL", evidence: string, lineNumber: number }
 
 Return ONLY JavaScript code.
 Do not explain.
@@ -40,24 +43,28 @@ Do not explain.
     }
 
     public List<Result> retryFailedRules(List<String> failedRuleIds, String config,
-            Map<String, String> ruleIdToExpectedCommand) {
+            Map<String, ExpectedResult> expectedByRuleId) {
         List<Result> retryResults = new ArrayList<>();
 
         for (String ruleId : failedRuleIds) {
-            Result retryResult = retryRule(ruleId, config, ruleIdToExpectedCommand.get(ruleId));
+            Result retryResult = retryRule(ruleId, config, expectedByRuleId.get(ruleId));
             retryResults.add(retryResult);
         }
 
         return retryResults;
     }
 
-    private Result retryRule(String ruleId, String config, String expectedCommand) {
+    private Result retryRule(String ruleId, String config, ExpectedResult expectedResult) {
+        if (expectedResult == null) {
+            return new Result(ruleId, "RETRY_SKIPPED", "Missing expected result for retry", -1);
+        }
+
         Result result = null;
         int retryCount = 0;
 
         while (retryCount < MAX_RETRIES) {
             try {
-                String improvedJsCode = generateImprovedCode(expectedCommand);
+                String improvedJsCode = generateImprovedCode(expectedResult.getStatus(), expectedResult.getLineNumber());
                 result = jsExecutor.execute(improvedJsCode, config, ruleId);
 
                 // If we got a successful result, return it
@@ -79,7 +86,8 @@ Do not explain.
         return new Result(ruleId, "RETRY_FAILED", "Max retries exceeded", -1);
     }
 
-    private String generateImprovedCode(String expectedCommand) {
-        return ollamaService.generateCheckFunctionWithPrompt(String.format(IMPROVED_PROMPT, expectedCommand));
+    private String generateImprovedCode(String expectedStatus, int expectedLine) {
+        return ollamaService.generateCheckFunctionWithPrompt(
+                String.format(IMPROVED_PROMPT, expectedStatus, expectedLine));
     }
 }

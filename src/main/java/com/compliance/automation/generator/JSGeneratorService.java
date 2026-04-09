@@ -16,6 +16,8 @@ public class JSGeneratorService {
 
     private static final Logger log = LoggerFactory.getLogger(JSGeneratorService.class);
     private static final int MAX_LOG_CHARS = 800;
+    private static final String CHECK_FUNCTION_SIGNATURE = "function check";
+    private static final String RETURN_KEYWORD = "return";
 
     private final OllamaService ollamaService;
     private final Map<String, String> jsCodeCache;
@@ -44,17 +46,49 @@ public class JSGeneratorService {
         // Check cache first
         if (jsCodeCache.containsKey(cacheKey)) {
             log.debug("Using cached JavaScript for ruleId={}", cacheKey);
-            return jsCodeCache.get(cacheKey);
+            String cachedJs = jsCodeCache.get(cacheKey);
+            if (isValidJavaScript(cachedJs)) {
+                return cachedJs;
+            }
+
+            log.warn("Cached JavaScript is invalid for ruleId={}; regenerating", cacheKey);
+            jsCodeCache.remove(cacheKey);
         }
 
-        // Generate if not cached
-        String jsCode = ollamaService.generateCheckFunction(rule.getExpectedCommand());
-        log.debug("Generated JS for ruleId={}: {}", cacheKey, truncate(jsCode));
+        String jsCode = generateValidJavaScript(rule);
+        log.debug("Validated JS for ruleId={}: {}", cacheKey, truncate(jsCode));
 
         // Store in cache
         jsCodeCache.put(cacheKey, jsCode);
 
         return jsCode;
+    }
+
+    private String generateValidJavaScript(Rule rule) {
+        String firstAttempt = ollamaService.generateCheckFunction(rule.getExpectedCommand());
+        if (isValidJavaScript(firstAttempt)) {
+            return firstAttempt;
+        }
+
+        log.warn("Generated JS is invalid for ruleId={}; retrying once", rule.getRuleId());
+
+        String secondAttempt = ollamaService.generateCheckFunction(rule.getExpectedCommand());
+        if (isValidJavaScript(secondAttempt)) {
+            return secondAttempt;
+        }
+
+        throw new IllegalStateException(
+                "Generated JavaScript is invalid for ruleId=" + rule.getRuleId()
+                        + ". Required tokens: 'function check' and 'return'.");
+    }
+
+    private boolean isValidJavaScript(String jsCode) {
+        if (jsCode == null) {
+            return false;
+        }
+
+        String normalized = jsCode.toLowerCase();
+        return normalized.contains(CHECK_FUNCTION_SIGNATURE) && normalized.contains(RETURN_KEYWORD);
     }
 
     public void clearCache() {

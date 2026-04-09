@@ -9,10 +9,14 @@ import java.util.stream.Collectors;
 import com.compliance.automation.model.ExpectedResult;
 import com.compliance.automation.model.Result;
 import com.compliance.automation.model.ValidationResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ValidationService {
+
+    private static final Logger log = LoggerFactory.getLogger(ValidationService.class);
 
     public ValidationResult validate(List<Result> actualResults, List<ExpectedResult> expectedResults) {
         List<String> failedRuleIds = new ArrayList<>();
@@ -56,6 +60,11 @@ public class ValidationService {
         }
 
         boolean matched = failedRuleIds.isEmpty();
+        if (matched) {
+            log.info("Validation passed: all {} rules matched", actualResults.size());
+        } else {
+            log.warn("Validation completed with {} mismatches", failedRuleIds.size());
+        }
         return new ValidationResult(matched, failedRuleIds, mismatchReasons);
     }
 
@@ -65,6 +74,7 @@ public class ValidationService {
             failedRuleIds.add(ruleId);
         }
         mismatchReasons.put(ruleId, reason);
+        log.warn("Validation mismatch for ruleId={}: {}", ruleId, reason);
     }
 
     private boolean statusMatches(String actualStatus, String expectedStatus) {

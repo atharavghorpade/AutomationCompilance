@@ -3,6 +3,8 @@ package com.compliance.automation.llm;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -13,6 +15,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 public class OllamaService {
 
+    private static final Logger log = LoggerFactory.getLogger(OllamaService.class);
+    private static final int MAX_LOG_CHARS = 1200;
     private static final String MODEL = "llama3";
     private static final String PROMPT_TEMPLATE = """
 Generate JavaScript function.
@@ -44,6 +48,7 @@ Do not explain.
     public String generateCheckFunction(String expectedCommand) {
         String prompt = String.format(PROMPT_TEMPLATE, expectedCommand);
         String fullUrl = ollamaUrl + "/api/generate";
+        log.debug("LLM prompt for expectedCommand={}: {}", expectedCommand, truncate(prompt));
 
         Map<String, Object> request = new HashMap<>();
         request.put("model", MODEL);
@@ -52,14 +57,19 @@ Do not explain.
 
         try {
             String response = restTemplate.postForObject(fullUrl, request, String.class);
-            return extractGeneratedText(response);
+            log.debug("LLM raw response: {}", truncate(response));
+            String generatedCode = extractGeneratedText(response);
+            log.debug("Generated JS from LLM: {}", truncate(generatedCode));
+            return generatedCode;
         } catch (Exception exception) {
+            log.error("Failed to generate JS from Ollama for expectedCommand={}", expectedCommand, exception);
             throw new RuntimeException("Failed to generate JS from Ollama: " + exception.getMessage(), exception);
         }
     }
 
     public String generateCheckFunctionWithPrompt(String customPrompt) {
         String fullUrl = ollamaUrl + "/api/generate";
+        log.debug("LLM custom prompt: {}", truncate(customPrompt));
 
         Map<String, Object> request = new HashMap<>();
         request.put("model", MODEL);
@@ -68,8 +78,12 @@ Do not explain.
 
         try {
             String response = restTemplate.postForObject(fullUrl, request, String.class);
-            return extractGeneratedText(response);
+            log.debug("LLM raw response: {}", truncate(response));
+            String generatedCode = extractGeneratedText(response);
+            log.debug("Generated JS from retry prompt: {}", truncate(generatedCode));
+            return generatedCode;
         } catch (Exception exception) {
+            log.error("Failed to generate JS from Ollama with custom prompt", exception);
             throw new RuntimeException("Failed to generate JS from Ollama: " + exception.getMessage(), exception);
         }
     }
@@ -98,5 +112,15 @@ Do not explain.
         }
         
         return code;
+    }
+
+    private String truncate(String value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.length() <= MAX_LOG_CHARS) {
+            return value;
+        }
+        return value.substring(0, MAX_LOG_CHARS) + "... [truncated]";
     }
 }

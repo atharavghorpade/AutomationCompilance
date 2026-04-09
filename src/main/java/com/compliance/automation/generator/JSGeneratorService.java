@@ -7,10 +7,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.compliance.automation.llm.OllamaService;
 import com.compliance.automation.model.Rule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class JSGeneratorService {
+
+    private static final Logger log = LoggerFactory.getLogger(JSGeneratorService.class);
+    private static final int MAX_LOG_CHARS = 800;
 
     private final OllamaService ollamaService;
     private final Map<String, String> jsCodeCache;
@@ -28,6 +33,8 @@ public class JSGeneratorService {
             result.put(rule.getRuleId(), jsCode);
         }
 
+        log.info("Generated JavaScript for {} rules", result.size());
+
         return result;
     }
 
@@ -36,11 +43,13 @@ public class JSGeneratorService {
 
         // Check cache first
         if (jsCodeCache.containsKey(cacheKey)) {
+            log.debug("Using cached JavaScript for ruleId={}", cacheKey);
             return jsCodeCache.get(cacheKey);
         }
 
         // Generate if not cached
         String jsCode = ollamaService.generateCheckFunction(rule.getExpectedCommand());
+        log.debug("Generated JS for ruleId={}: {}", cacheKey, truncate(jsCode));
 
         // Store in cache
         jsCodeCache.put(cacheKey, jsCode);
@@ -50,9 +59,20 @@ public class JSGeneratorService {
 
     public void clearCache() {
         jsCodeCache.clear();
+        log.info("JavaScript generation cache cleared");
     }
 
     public int getCacheSize() {
         return jsCodeCache.size();
+    }
+
+    private String truncate(String value) {
+        if (value == null) {
+            return null;
+        }
+        if (value.length() <= MAX_LOG_CHARS) {
+            return value;
+        }
+        return value.substring(0, MAX_LOG_CHARS) + "... [truncated]";
     }
 }

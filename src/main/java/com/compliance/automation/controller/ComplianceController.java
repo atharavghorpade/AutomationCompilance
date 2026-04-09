@@ -33,7 +33,7 @@ public class ComplianceController {
 
     @PostMapping("/run")
     public ResponseEntity<Report> run(@RequestBody RunRequest request) {
-        Report report = complianceOrchestrator.runCompliance(request.config(), List.of());
+        Report report = complianceOrchestrator.runCompliance(request.config(), List.of(), null);
         return ResponseEntity.ok(report);
     }
 
@@ -41,10 +41,11 @@ public class ComplianceController {
     public ResponseEntity<Report> runCompliance(
             @RequestParam("configFile") MultipartFile configFile,
             @RequestParam("expectedFile") MultipartFile expectedFile,
+            @RequestParam(value = "pdfFile", required = false) MultipartFile pdfFile,
             @RequestParam("type") String type) throws IOException {
         String config = configFile == null ? "" : new String(configFile.getBytes(), StandardCharsets.UTF_8);
         List<ExpectedResult> expectedResults = expectedResultLoader.load(expectedFile);
-        Report report = complianceOrchestrator.runCompliance(config, expectedResults);
+        Report report = complianceOrchestrator.runCompliance(config, expectedResults, pdfFile);
         return ResponseEntity.ok(report);
     }
 

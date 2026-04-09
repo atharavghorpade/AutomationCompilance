@@ -19,6 +19,7 @@ import com.compliance.automation.retry.RetryEngine;
 import com.compliance.automation.storage.FileStorageService;
 import com.compliance.automation.validator.ValidationService;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class ComplianceOrchestrator {
@@ -48,12 +49,13 @@ public class ComplianceOrchestrator {
 		this.fileStorageService = fileStorageService;
 	}
 
-	public Report runCompliance(String config, List<ExpectedResult> expectedResults) {
+	public Report runCompliance(String config, List<ExpectedResult> expectedResults, MultipartFile pdfFile) {
 		String safeConfig = config == null ? "" : config;
 		List<ExpectedResult> safeExpectedResults = Objects.requireNonNull(expectedResults,
 				"expectedResults must not be null");
 
-		List<Rule> rules = metadataExtractor.extractRulesFromFile(null);
+		String pdfSource = (pdfFile != null && !pdfFile.isEmpty()) ? pdfFile.getOriginalFilename() : null;
+		List<Rule> rules = metadataExtractor.extractRulesFromFile(pdfSource);
 
 		Map<String, String> jsByRuleId = jsGeneratorService.generateCheckFunctions(rules);
 		saveGeneratedJavaScript(jsByRuleId);

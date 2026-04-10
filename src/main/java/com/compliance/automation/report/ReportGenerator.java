@@ -1,5 +1,6 @@
 package com.compliance.automation.report;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,12 +10,27 @@ import com.compliance.automation.model.ExpectedResult;
 import com.compliance.automation.model.Report;
 import com.compliance.automation.model.Result;
 import com.compliance.automation.model.RuleReport;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ReportGenerator {
 
+	private static final Logger log = LoggerFactory.getLogger(ReportGenerator.class);
+
+	private final ObjectMapper objectMapper;
+
+	public ReportGenerator(ObjectMapper objectMapper) {
+		this.objectMapper = objectMapper;
+	}
+
 	public Report generateReport(List<Result> actualResults, List<ExpectedResult> expectedResults) {
+		log.info("Generating structured report from {} actual results and {} expected results",
+				actualResults == null ? 0 : actualResults.size(),
+				expectedResults == null ? 0 : expectedResults.size());
+
 		Map<String, Result> actualByRuleId = new LinkedHashMap<>();
 		if (actualResults != null) {
 			for (Result result : actualResults) {
@@ -52,6 +68,8 @@ public class ReportGenerator {
 			String validation = statusMatch && lineMatch ? "MATCH" : "MISMATCH";
 
 			reportRows.add(new RuleReport(ruleId, actualStatus, expectedStatus, actualLine, validation));
+			log.debug("Report row built for ruleId={}: actualStatus={}, expectedStatus={}, lineNumber={}, validation={}",
+					ruleId, actualStatus, expectedStatus, actualLine, validation);
 
 			if ("MATCH".equals(validation)) {
 				passed++;
@@ -75,7 +93,24 @@ public class ReportGenerator {
 		}
 
 		int total = reportRows.size();
-		return new Report(reportRows, total, passed, failed);
+		Report report = new Report(reportRows, total, passed, failed);
+		log.info("Structured report generated: total={}, passed={}, failed={}", total, passed, failed);
+		return report;
+	}
+
+	public String exportToJson(Report report) {
+		if (report == null) {
+			throw new IllegalArgumentException("Report must not be null");
+		}
+
+		try {
+			String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(report);
+			log.info("Exported report to JSON (chars={})", json.length());
+			return json;
+		} catch (IOException exception) {
+			log.error("Failed to export report to JSON", exception);
+			throw new RuntimeException("Failed to export report to JSON", exception);
+		}
 	}
 
 	private boolean equalsIgnoreCase(String left, String right) {

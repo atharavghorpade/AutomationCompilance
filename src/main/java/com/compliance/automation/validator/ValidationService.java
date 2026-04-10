@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.compliance.automation.model.ExpectedResult;
@@ -22,22 +23,45 @@ public class ValidationService {
         List<String> failedRuleIds = new ArrayList<>();
         Map<String, String> mismatchReasons = new LinkedHashMap<>();
 
-        Map<String, ExpectedResult> expectedMap = expectedResults.stream()
-                .collect(Collectors.toMap(ExpectedResult::getRuleId, e -> e));
+        int actualCount = actualResults == null ? 0 : actualResults.size();
+        int expectedCount = expectedResults == null ? 0 : expectedResults.size();
+        log.info("Starting validation: actualResults={}, expectedResults={}", actualCount, expectedCount);
 
-        Map<String, Result> actualMap = actualResults.stream()
-                .collect(Collectors.toMap(Result::getRuleId, r -> r, (first, second) -> first));
+        if (actualResults == null || actualResults.isEmpty()) {
+            log.warn("No actual results provided for validation");
+        }
 
-        for (Result actual : actualResults) {
-            ExpectedResult expected = expectedMap.get(actual.getRuleId());
+        if (expectedResults == null || expectedResults.isEmpty()) {
+            log.warn("No expected results provided for validation");
+        }
+
+        Map<String, ExpectedResult> expectedMap = expectedResults == null ? Map.of() : expectedResults.stream()
+                .filter(Objects::nonNull)
+                .filter(expected -> expected.getRuleId() != null && !expected.getRuleId().isBlank())
+                .collect(Collectors.toMap(ExpectedResult::getRuleId, e -> e, (first, second) -> first, LinkedHashMap::new));
+
+        Map<String, Result> actualMap = actualResults == null ? Map.of() : actualResults.stream()
+                .filter(Objects::nonNull)
+                .filter(actual -> actual.getRuleId() != null && !actual.getRuleId().isBlank())
+                .collect(Collectors.toMap(Result::getRuleId, r -> r, (first, second) -> first, LinkedHashMap::new));
+
+        log.debug("Validation maps prepared: actualKeys={}, expectedKeys={}", actualMap.keySet(), expectedMap.keySet());
+
+        for (Result actual : actualMap.values()) {
+            String actualRuleId = actual.getRuleId();
+            ExpectedResult expected = expectedMap.get(actualRuleId);
 
             if (expected == null) {
-                addFailure(failedRuleIds, mismatchReasons, actual.getRuleId(),
-                        "Missing expected result for ruleId " + actual.getRuleId());
+                addFailure(failedRuleIds, mismatchReasons, actualRuleId,
+                        "Missing expected result for ruleId " + actualRuleId);
                 continue;
             }
 
             List<String> mismatches = new ArrayList<>();
+
+            if (!ruleIdMatches(actualRuleId, expected.getRuleId())) {
+                mismatches.add("ruleId mismatch: expected=" + expected.getRuleId() + ", actual=" + actualRuleId);
+            }
 
             if (!statusMatches(actual.getStatus(), expected.getStatus())) {
                 mismatches.add("status mismatch: expected=" + expected.getStatus() + ", actual=" + actual.getStatus());
@@ -48,22 +72,32 @@ public class ValidationService {
             }
 
             if (!mismatches.isEmpty()) {
-                addFailure(failedRuleIds, mismatchReasons, actual.getRuleId(), String.join("; ", mismatches));
+                String reason = String.join("; ", mismatches);
+                log.debug("Rule validation failed for ruleId={}: {}", actualRuleId, reason);
+                addFailure(failedRuleIds, mismatchReasons, actualRuleId, reason);
+            } else {
+                log.debug("Rule validation matched for ruleId={}", actualRuleId);
             }
         }
 
         for (ExpectedResult expected : expectedResults) {
+            if (expected == null || expected.getRuleId() == null || expected.getRuleId().isBlank()) {
+                continue;
+            }
+
             if (!actualMap.containsKey(expected.getRuleId())) {
-                addFailure(failedRuleIds, mismatchReasons, expected.getRuleId(),
-                        "Missing actual result for ruleId " + expected.getRuleId());
+                String reason = "Missing actual result for ruleId " + expected.getRuleId();
+                log.debug("Expected rule missing in actual results: {}", reason);
+                addFailure(failedRuleIds, mismatchReasons, expected.getRuleId(), reason);
             }
         }
 
         boolean matched = failedRuleIds.isEmpty();
         if (matched) {
-            log.info("Validation passed: all {} rules matched", actualResults.size());
+            log.info("Validation passed: all {} rules matched", actualMap.size());
         } else {
             log.warn("Validation completed with {} mismatches", failedRuleIds.size());
+            log.debug("Validation mismatch reasons: {}", mismatchReasons);
         }
         return new ValidationResult(matched, failedRuleIds, mismatchReasons);
     }
@@ -75,6 +109,13 @@ public class ValidationService {
         }
         mismatchReasons.put(ruleId, reason);
         log.warn("Validation mismatch for ruleId={}: {}", ruleId, reason);
+    }
+
+    private boolean ruleIdMatches(String actualRuleId, String expectedRuleId) {
+        if (actualRuleId == null || expectedRuleId == null) {
+            return actualRuleId == expectedRuleId;
+        }
+        return actualRuleId.equals(expectedRuleId);
     }
 
     private boolean statusMatches(String actualStatus, String expectedStatus) {

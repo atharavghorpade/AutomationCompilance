@@ -1,6 +1,6 @@
 package com.compliance.automation.generator;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,7 +17,7 @@ public class JSGeneratorService {
     private static final Logger log = LoggerFactory.getLogger(JSGeneratorService.class);
     private static final int MAX_LOG_CHARS = 800;
     private static final String CHECK_FUNCTION_SIGNATURE = "function check";
-    private static final String RETURN_KEYWORD = "return";
+    private static final String STATUS_KEYWORD = "status";
 
     private final OllamaService ollamaService;
     private final Map<String, String> jsCodeCache;
@@ -28,26 +28,46 @@ public class JSGeneratorService {
     }
 
     public Map<String, String> generateCheckFunctions(List<Rule> rules) {
-        Map<String, String> result = new HashMap<>();
+        Map<String, String> result = new LinkedHashMap<>();
 
-        for (Rule rule : rules) {
-            String jsCode = generateOrRetrieveCheckFunction(rule);
-            result.put(rule.getRuleId(), jsCode);
+        if (rules == null || rules.isEmpty()) {
+            log.warn("No rules provided for JavaScript generation");
+            return result;
         }
 
-        log.info("Generated JavaScript for {} rules", result.size());
+        log.info("Generating JavaScript for {} rules", rules.size());
 
+        for (Rule rule : rules) {
+            if (rule == null || rule.getRuleId() == null || rule.getRuleId().isBlank()) {
+                log.warn("Skipping invalid rule entry during JS generation: {}", rule);
+                continue;
+            }
+
+            try {
+                String jsCode = generateOrRetrieveCheckFunction(rule);
+                if (jsCode == null || jsCode.isBlank()) {
+                    log.warn("No JavaScript generated for ruleId={}", rule.getRuleId());
+                    continue;
+                }
+
+                result.put(rule.getRuleId(), jsCode);
+                log.info("Generated JavaScript for ruleId={}", rule.getRuleId());
+            } catch (Exception exception) {
+                log.warn("Failed to generate JavaScript for ruleId={}; continuing with next rule", rule.getRuleId(), exception);
+            }
+        }
+
+        log.info("Completed JavaScript generation: {} successful out of {} rules", result.size(), rules.size());
         return result;
     }
 
     private String generateOrRetrieveCheckFunction(Rule rule) {
         String cacheKey = rule.getRuleId();
 
-        // Check cache first
         if (jsCodeCache.containsKey(cacheKey)) {
-            log.debug("Using cached JavaScript for ruleId={}", cacheKey);
             String cachedJs = jsCodeCache.get(cacheKey);
             if (isValidJavaScript(cachedJs)) {
+                log.debug("Using cached JavaScript for ruleId={}", cacheKey);
                 return cachedJs;
             }
 
@@ -57,10 +77,7 @@ public class JSGeneratorService {
 
         String jsCode = generateValidJavaScript(rule);
         log.debug("Validated JS for ruleId={}: {}", cacheKey, truncate(jsCode));
-
-        // Store in cache
         jsCodeCache.put(cacheKey, jsCode);
-
         return jsCode;
     }
 
@@ -77,18 +94,19 @@ public class JSGeneratorService {
             return secondAttempt;
         }
 
+        log.error("Generated JS failed validation after retry for ruleId={}", rule.getRuleId());
         throw new IllegalStateException(
                 "Generated JavaScript is invalid for ruleId=" + rule.getRuleId()
-                        + ". Required tokens: 'function check' and 'return'.");
+                        + ". Required tokens: 'function check' and 'status'.");
     }
 
     private boolean isValidJavaScript(String jsCode) {
-        if (jsCode == null) {
+        if (jsCode == null || jsCode.isBlank()) {
             return false;
         }
 
         String normalized = jsCode.toLowerCase();
-        return normalized.contains(CHECK_FUNCTION_SIGNATURE) && normalized.contains(RETURN_KEYWORD);
+        return normalized.contains(CHECK_FUNCTION_SIGNATURE) && normalized.contains(STATUS_KEYWORD);
     }
 
     public void clearCache() {

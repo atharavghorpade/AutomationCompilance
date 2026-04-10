@@ -8,18 +8,20 @@ import com.compliance.automation.executor.JSExecutor;
 import com.compliance.automation.llm.OllamaService;
 import com.compliance.automation.model.ExpectedResult;
 import com.compliance.automation.model.Result;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RetryEngine {
 
+    private static final Logger log = LoggerFactory.getLogger(RetryEngine.class);
     private static final int MAX_RETRIES = 2;
-        private static final String IMPROVED_PROMPT = """
-Previous output was incorrect.
+    private static final String IMPROVED_PROMPT = """
+Previous result was incorrect.
 Expected:
-- status: %s
-- lineNumber: %d
-
+status: %s
+lineNumber: %d
 Fix the logic.
 
 Generate JavaScript function.
@@ -28,7 +30,7 @@ Rules:
 - Function name: check(config)
 - Input: config (string)
 - Output:
-    { status: "PASS" | "FAIL", evidence: string, lineNumber: number }
+  { status: "PASS" | "FAIL", evidence: string, lineNumber: number }
 
 Return ONLY JavaScript code.
 Do not explain.
@@ -46,8 +48,16 @@ Do not explain.
             Map<String, ExpectedResult> expectedByRuleId) {
         List<Result> retryResults = new ArrayList<>();
 
+        if (failedRuleIds == null || failedRuleIds.isEmpty()) {
+            log.info("No failed rules provided for retry");
+            return retryResults;
+        }
+
+        log.info("Retrying {} failed rules with maxRetries={}", failedRuleIds.size(), MAX_RETRIES);
+
         for (String ruleId : failedRuleIds) {
-            Result retryResult = retryRule(ruleId, config, expectedByRuleId.get(ruleId));
+            ExpectedResult expectedResult = expectedByRuleId == null ? null : expectedByRuleId.get(ruleId);
+            Result retryResult = retryRule(ruleId, config, expectedResult);
             retryResults.add(retryResult);
         }
 
@@ -56,34 +66,43 @@ Do not explain.
 
     private Result retryRule(String ruleId, String config, ExpectedResult expectedResult) {
         if (expectedResult == null) {
-            return new Result(ruleId, "RETRY_SKIPPED", "Missing expected result for retry", -1);
+            log.warn("Skipping retry for ruleId={} because expected result is missing", ruleId);
+            return new Result(ruleId, "ERROR", "Missing expected result for retry", -1);
         }
 
-        Result result = null;
-        int retryCount = 0;
+        Result lastResult = null;
 
-        while (retryCount < MAX_RETRIES) {
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
+                log.info("Retry attempt {}/{} for ruleId={}", attempt, MAX_RETRIES, ruleId);
                 String improvedJsCode = generateImprovedCode(expectedResult.getStatus(), expectedResult.getLineNumber());
-                result = jsExecutor.execute(improvedJsCode, config, ruleId);
+                lastResult = jsExecutor.execute(improvedJsCode, config, ruleId);
 
-                // If we got a successful result, return it
-                if (result != null) {
-                    return result;
+                if (lastResult != null) {
+                    log.info("Retry attempt {}/{} completed for ruleId={} with status={} and lineNumber={}",
+                            attempt,
+                            MAX_RETRIES,
+                            ruleId,
+                            lastResult.getStatus(),
+                            lastResult.getLineNumber());
+
+                    if (!"ERROR".equalsIgnoreCase(lastResult.getStatus())) {
+                        return lastResult;
+                    }
                 }
             } catch (Exception exception) {
-                // Log and continue to next retry
+                log.warn("Retry attempt {}/{} failed for ruleId={}", attempt, MAX_RETRIES, ruleId, exception);
+                lastResult = new Result(ruleId, "ERROR", "Retry failed: " + exception.getMessage(), -1);
             }
-
-            retryCount++;
         }
 
-        // Return last result or error result
-        if (result != null) {
-            return result;
+        if (lastResult != null) {
+            log.warn("Retry exhausted for ruleId={} returning last result status={}", ruleId, lastResult.getStatus());
+            return lastResult;
         }
 
-        return new Result(ruleId, "RETRY_FAILED", "Max retries exceeded", -1);
+        log.error("Retry exhausted for ruleId={} with no result produced", ruleId);
+        return new Result(ruleId, "ERROR", "Max retries exceeded", -1);
     }
 
     private String generateImprovedCode(String expectedStatus, int expectedLine) {

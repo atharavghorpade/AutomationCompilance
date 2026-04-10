@@ -41,12 +41,34 @@ public class PDFParser {
 				log.debug("Extracted PDF text for page range {}-{}", startPage, endPage);
 			}
 
+			String normalizedText = normalizeText(extractedText.toString());
+
 			log.info("Completed PDF text extraction for file={} (pages={}, chars={})",
-					file.getName(), totalPages, extractedText.length());
-			return extractedText.toString();
+					file.getName(), totalPages, normalizedText.length());
+			log.debug("Raw chars={}, normalized chars={}", extractedText.length(), normalizedText.length());
+			return normalizedText;
 		} catch (IOException exception) {
 			log.error("Failed to extract text from PDF file={}", file.getAbsolutePath(), exception);
 			throw new RuntimeException("Failed to extract text from PDF", exception);
 		}
+	}
+
+	private String normalizeText(String rawText) {
+		if (rawText == null || rawText.isEmpty()) {
+			return "";
+		}
+
+		String normalizedNewLines = rawText.replace("\r\n", "\n").replace('\r', '\n');
+		String[] lines = normalizedNewLines.split("\\n", -1);
+		StringBuilder normalized = new StringBuilder(rawText.length());
+
+		for (int i = 0; i < lines.length; i++) {
+			normalized.append(lines[i].trim());
+			if (i < lines.length - 1) {
+				normalized.append(System.lineSeparator());
+			}
+		}
+
+		return normalized.toString().trim();
 	}
 }

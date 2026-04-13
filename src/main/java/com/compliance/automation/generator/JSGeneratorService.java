@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.compliance.automation.exception.LlmProcessingException;
+import com.compliance.automation.formatter.CISFormatter;
 import com.compliance.automation.llm.OllamaService;
 import com.compliance.automation.model.Rule;
 import org.slf4j.Logger;
@@ -21,15 +22,19 @@ public class JSGeneratorService {
     private static final String STATUS_KEYWORD = "status";
     private static final String LINE_SPLIT_TOKEN_DOUBLE_QUOTE = "split(\"\\\\n\")";
     private static final String LINE_SPLIT_TOKEN_SINGLE_QUOTE = "split('\\\\n')";
-    private static final String MATCH_TOKEN = "includes(expectedcommand)";
+    private static final String MATCH_TOKEN_DOUBLE_QUOTE = "lines[i].includes(\"";
+    private static final String MATCH_TOKEN_SINGLE_QUOTE = "lines[i].includes('";
     private static final String PASS_LINE_NUMBER_TOKEN = "linenumber: i + 1";
+    private static final String FAIL_EVIDENCE_TOKEN = "evidence: \"not found\"";
     private static final String FAIL_LINE_NUMBER_TOKEN = "linenumber: -1";
 
     private final OllamaService ollamaService;
+    private final CISFormatter cisFormatter;
     private final Map<String, String> jsCodeCache;
 
-    public JSGeneratorService(OllamaService ollamaService) {
+    public JSGeneratorService(OllamaService ollamaService, CISFormatter cisFormatter) {
         this.ollamaService = ollamaService;
+        this.cisFormatter = cisFormatter;
         this.jsCodeCache = new ConcurrentHashMap<>();
     }
 
@@ -88,7 +93,7 @@ public class JSGeneratorService {
             jsCodeCache.remove(cacheKey);
         }
 
-        String jsCode = generateValidJavaScript(rule);
+        String jsCode = cisFormatter.format(generateValidJavaScript(rule));
         log.debug("Validated JS for ruleId={}: {}", cacheKey, truncate(jsCode));
         jsCodeCache.put(cacheKey, jsCode);
         return jsCode;
@@ -123,8 +128,10 @@ public class JSGeneratorService {
                 && normalized.contains(STATUS_KEYWORD)
             && (normalized.contains(LINE_SPLIT_TOKEN_DOUBLE_QUOTE)
                 || normalized.contains(LINE_SPLIT_TOKEN_SINGLE_QUOTE))
-                && normalized.contains(MATCH_TOKEN)
+                && (normalized.contains(MATCH_TOKEN_DOUBLE_QUOTE)
+                    || normalized.contains(MATCH_TOKEN_SINGLE_QUOTE))
                 && normalized.contains(PASS_LINE_NUMBER_TOKEN)
+                && normalized.contains(FAIL_EVIDENCE_TOKEN)
                 && normalized.contains(FAIL_LINE_NUMBER_TOKEN);
     }
 

@@ -20,27 +20,31 @@ public class OllamaService {
     private static final int MAX_LOG_CHARS = 1200;
     private static final String MODEL = "llama3";
     private static final String PROMPT_TEMPLATE = """
-Generate ONLY JavaScript code for function check(config).
+Output ONLY JavaScript.
+No explanation.
+No markdown.
 
-STRICT REQUIREMENTS (must follow exactly):
-1) Input is raw multiline config string.
-2) You MUST split lines exactly using:
+Generate this exact format and replace EXPECTED_COMMAND with this value: %s
+
+function check(config) {
     const lines = config.split("\\n");
-3) You MUST iterate exactly with a line-index loop:
-    for (let i = 0; i < lines.length; i++) { ... }
-4) Use expected command variable exactly:
-    const expectedCommand = "%s";
-5) PASS condition must be:
-    if (lines[i].includes(expectedCommand)) {
-      return {
-         status: "PASS",
-         evidence: lines[i],
-         lineNumber: i + 1
-      };
-    }
-6) If not found, return FAIL exactly with lineNumber -1.
 
-Return only valid JavaScript function code. No markdown. No explanation.
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes("EXPECTED_COMMAND")) {
+            return {
+                status: "PASS",
+                evidence: lines[i],
+                lineNumber: i + 1
+            };
+        }
+    }
+
+    return {
+        status: "FAIL",
+        evidence: "Not found",
+        lineNumber: -1
+    };
+}
 """;
 
     private final RestTemplate restTemplate;
@@ -147,12 +151,16 @@ Return only valid JavaScript function code. No markdown. No explanation.
             throw new LlmProcessingException("Generated code must iterate over lines using index-based for loop.");
         }
 
-        if (!normalized.contains("lines[i].includes(expectedcommand)")) {
-            throw new LlmProcessingException("Generated code must use lines[i].includes(expectedCommand) matching logic.");
+        if (!normalized.contains("lines[i].includes(\"") && !normalized.contains("lines[i].includes('\")) {
+            throw new LlmProcessingException("Generated code must use lines[i].includes(\"EXPECTED_COMMAND\") matching logic.");
         }
 
         if (!normalized.contains("linenumber: i + 1") && !normalized.contains("linenumber:i+1")) {
             throw new LlmProcessingException("Generated code must set PASS lineNumber to i + 1.");
+        }
+
+        if (!normalized.contains("evidence: \"not found\"") && !normalized.contains("evidence:\"not found\"")) {
+            throw new LlmProcessingException("Generated code must set FAIL evidence to \"Not found\".");
         }
 
         if (!normalized.contains("linenumber: -1") && !normalized.contains("linenumber:-1")) {

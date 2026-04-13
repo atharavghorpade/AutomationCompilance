@@ -9,6 +9,6 @@ public class TestController {
 
     @GetMapping(value = "/test", produces = MediaType.TEXT_PLAIN_VALUE)
     public String test() {
-        return "Working";
+        return "working very Hard";
     }
 }

@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.compliance.automation.exception.FileProcessingException;
 import com.compliance.automation.model.ExpectedResult;
 import com.compliance.automation.model.Report;
 import com.compliance.automation.model.Result;
@@ -31,23 +32,8 @@ public class ReportGenerator {
 				actualResults == null ? 0 : actualResults.size(),
 				expectedResults == null ? 0 : expectedResults.size());
 
-		Map<String, Result> actualByRuleId = new LinkedHashMap<>();
-		if (actualResults != null) {
-			for (Result result : actualResults) {
-				if (result != null && result.getRuleId() != null) {
-					actualByRuleId.put(result.getRuleId(), result);
-				}
-			}
-		}
-
-		Map<String, ExpectedResult> expectedByRuleId = new LinkedHashMap<>();
-		if (expectedResults != null) {
-			for (ExpectedResult expected : expectedResults) {
-				if (expected != null && expected.getRuleId() != null) {
-					expectedByRuleId.put(expected.getRuleId(), expected);
-				}
-			}
-		}
+		Map<String, Result> actualByRuleId = toActualMap(actualResults);
+		Map<String, ExpectedResult> expectedByRuleId = toExpectedMap(expectedResults);
 
 		List<RuleReport> reportRows = new ArrayList<>();
 		int passed = 0;
@@ -109,7 +95,7 @@ public class ReportGenerator {
 			return json;
 		} catch (IOException exception) {
 			log.error("Failed to export report to JSON", exception);
-			throw new RuntimeException("Failed to export report to JSON", exception);
+			throw new FileProcessingException("Failed to export report to JSON.", exception);
 		}
 	}
 
@@ -118,5 +104,35 @@ public class ReportGenerator {
 			return left == right;
 		}
 		return left.equalsIgnoreCase(right);
+	}
+
+	private Map<String, Result> toActualMap(List<Result> actualResults) {
+		Map<String, Result> actualByRuleId = new LinkedHashMap<>();
+		if (actualResults == null) {
+			return actualByRuleId;
+		}
+
+		for (Result result : actualResults) {
+			if (result == null || result.getRuleId() == null) {
+				continue;
+			}
+			actualByRuleId.put(result.getRuleId(), result);
+		}
+		return actualByRuleId;
+	}
+
+	private Map<String, ExpectedResult> toExpectedMap(List<ExpectedResult> expectedResults) {
+		Map<String, ExpectedResult> expectedByRuleId = new LinkedHashMap<>();
+		if (expectedResults == null) {
+			return expectedByRuleId;
+		}
+
+		for (ExpectedResult expected : expectedResults) {
+			if (expected == null || expected.getRuleId() == null) {
+				continue;
+			}
+			expectedByRuleId.put(expected.getRuleId(), expected);
+		}
+		return expectedByRuleId;
 	}
 }

@@ -14,6 +14,7 @@ C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\j
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\llm\OllamaService.java
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\loader\ExpectedResultLoader.java
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\loader\ExpectedResultLoaderException.java
+C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\model\ComplianceType.java
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\model\ExpectedResult.java
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\model\package-info.java
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\model\Report.java
@@ -26,5 +27,6 @@ C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\j
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\parser\PDFParser.java
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\report\ReportGenerator.java
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\retry\RetryEngine.java
+C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\service\ComplianceRequestService.java
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\storage\FileStorageService.java
 C:\Users\AtharavGhorpade\Downloads\SpringBoot\CompilanceAutoGenerator\src\main\java\com\compliance\automation\validator\ValidationService.java

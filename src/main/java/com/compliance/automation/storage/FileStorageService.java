@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import com.compliance.automation.exception.FileProcessingException;
 import com.compliance.automation.model.Rule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -49,7 +50,7 @@ public class FileStorageService {
 			return savedPath;
 		} catch (IOException exception) {
 			log.error("Failed to save metadata JSON", exception);
-			throw new RuntimeException("Failed to save metadata JSON", exception);
+			throw new FileProcessingException("Failed to save metadata JSON.", exception);
 		}
 	}
 
@@ -63,7 +64,7 @@ public class FileStorageService {
 			return filePath;
 		} catch (IOException exception) {
 			log.error("Failed to save file {} in directory {}", fileName, directory, exception);
-			throw new RuntimeException("Failed to save file: " + fileName, exception);
+			throw new FileProcessingException("Failed to save file: " + fileName, exception);
 		}
 	}
 

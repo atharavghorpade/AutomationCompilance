@@ -3,6 +3,7 @@ package com.compliance.automation.parser;
 import java.io.File;
 import java.io.IOException;
 
+import com.compliance.automation.exception.FileProcessingException;
 import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -52,7 +53,7 @@ public class PDFParser {
 			return normalizedText;
 		} catch (IOException exception) {
 			log.error("Failed to extract text from PDF file={}", file.getAbsolutePath(), exception);
-			throw new RuntimeException("Failed to extract text from PDF", exception);
+			throw new FileProcessingException("Failed to extract text from PDF.", exception);
 		}
 	}
 

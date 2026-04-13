@@ -28,9 +28,15 @@ Generate JavaScript function.
 
 Rules:
 - Function name: check(config)
-- Input: config (string)
+- Input: config (raw multiline string)
 - Output:
   { status: "PASS" | "FAIL", evidence: string, lineNumber: number }
+
+Mandatory matching logic:
+- const lines = config.split("\\n");
+- for (let i = 0; i < lines.length; i++) { ... }
+- if (lines[i].includes(expectedCommand)) return PASS with lineNumber: i + 1
+- if not found return FAIL with lineNumber: -1
 
 Return ONLY JavaScript code.
 Do not explain.

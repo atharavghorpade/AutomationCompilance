@@ -1,9 +1,6 @@
 package com.compliance.automation.executor;
 
-import java.io.IOException;
-
 import com.compliance.automation.model.Result;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,8 +45,8 @@ public class JSExecutor {
                 return buildErrorResult(ruleId, "Missing executable check(config) function");
             }
 
-            Value configValue = parseAndConvertConfig(context, config);
-            Value executionResult = checkFunction.execute(configValue);
+            String safeConfig = config == null ? "" : config;
+            Value executionResult = checkFunction.execute(safeConfig);
 
             Result result = new Result(
                     ruleId,
@@ -77,26 +74,6 @@ public class JSExecutor {
             }
             log.error("Runtime error while executing JS for ruleId={}: {}", ruleId, exception.getMessage(), exception);
             return buildErrorResult(ruleId, "Runtime error: " + exception.getMessage());
-        } catch (IllegalArgumentException exception) {
-            log.error("Invalid config while executing ruleId={}: {}", ruleId, exception.getMessage(), exception);
-            return buildErrorResult(ruleId, "Invalid config: " + exception.getMessage());
-        }
-    }
-
-    private Value parseAndConvertConfig(Context context, String config) {
-        try {
-            JsonNode jsonNode = objectMapper.readTree(config);
-            
-            if (jsonNode.isArray()) {
-                return context.eval("js", "(" + config + ")");
-            } else if (jsonNode.isObject()) {
-                return context.eval("js", "(" + config + ")");
-            } else {
-                throw new IllegalArgumentException("Config must be a JSON object or array");
-            }
-        } catch (IOException exception) {
-            throw new IllegalArgumentException("Config must be valid JSON: " + exception.getMessage(), exception);
-        }
     }
 
     private String extractString(Value value, String memberName) {

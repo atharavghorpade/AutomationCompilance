@@ -19,6 +19,11 @@ public class JSGeneratorService {
     private static final int MAX_LOG_CHARS = 800;
     private static final String CHECK_FUNCTION_SIGNATURE = "function check";
     private static final String STATUS_KEYWORD = "status";
+    private static final String LINE_SPLIT_TOKEN_DOUBLE_QUOTE = "split(\"\\\\n\")";
+    private static final String LINE_SPLIT_TOKEN_SINGLE_QUOTE = "split('\\\\n')";
+    private static final String MATCH_TOKEN = "includes(expectedcommand)";
+    private static final String PASS_LINE_NUMBER_TOKEN = "linenumber: i + 1";
+    private static final String FAIL_LINE_NUMBER_TOKEN = "linenumber: -1";
 
     private final OllamaService ollamaService;
     private final Map<String, String> jsCodeCache;
@@ -114,7 +119,13 @@ public class JSGeneratorService {
         }
 
         String normalized = jsCode.toLowerCase();
-        return normalized.contains(CHECK_FUNCTION_SIGNATURE) && normalized.contains(STATUS_KEYWORD);
+        return normalized.contains(CHECK_FUNCTION_SIGNATURE)
+                && normalized.contains(STATUS_KEYWORD)
+            && (normalized.contains(LINE_SPLIT_TOKEN_DOUBLE_QUOTE)
+                || normalized.contains(LINE_SPLIT_TOKEN_SINGLE_QUOTE))
+                && normalized.contains(MATCH_TOKEN)
+                && normalized.contains(PASS_LINE_NUMBER_TOKEN)
+                && normalized.contains(FAIL_LINE_NUMBER_TOKEN);
     }
 
     public void clearCache() {

@@ -20,19 +20,27 @@ public class OllamaService {
     private static final int MAX_LOG_CHARS = 1200;
     private static final String MODEL = "llama3";
     private static final String PROMPT_TEMPLATE = """
-Generate JavaScript function.
+Generate ONLY JavaScript code for function check(config).
 
-Rules:
-- Function name: check(config)
-- Input: config (string)
-- Output:
-  { status: "PASS" | "FAIL", evidence: string, lineNumber: number }
+STRICT REQUIREMENTS (must follow exactly):
+1) Input is raw multiline config string.
+2) You MUST split lines exactly using:
+    const lines = config.split("\\n");
+3) You MUST iterate exactly with a line-index loop:
+    for (let i = 0; i < lines.length; i++) { ... }
+4) Use expected command variable exactly:
+    const expectedCommand = "%s";
+5) PASS condition must be:
+    if (lines[i].includes(expectedCommand)) {
+      return {
+         status: "PASS",
+         evidence: lines[i],
+         lineNumber: i + 1
+      };
+    }
+6) If not found, return FAIL exactly with lineNumber -1.
 
-Check if config contains:
-"%s"
-
-Return ONLY JavaScript code.
-Do not explain.
+Return only valid JavaScript function code. No markdown. No explanation.
 """;
 
     private final RestTemplate restTemplate;
@@ -118,8 +126,38 @@ Do not explain.
         if (!code.startsWith("function check")) {
             throw new LlmProcessingException("Generated code does not contain function check(config)");
         }
+
+        validateLineDetectionLogic(code);
         
         return code;
+    }
+
+    private void validateLineDetectionLogic(String code) {
+        String normalized = code.replace("\r\n", "\n").replace('\r', '\n').toLowerCase();
+
+        if (!normalized.contains("const lines = config.split(\"\\\\n\")")
+                && !normalized.contains("const lines=config.split(\"\\\\n\")")
+                && !normalized.contains("const lines = config.split('\\\\n')")
+                && !normalized.contains("const lines=config.split('\\\\n')")) {
+            throw new LlmProcessingException("Generated code must split config into lines using config.split(\"\\n\").");
+        }
+
+        if (!normalized.contains("for (let i = 0; i < lines.length; i++)")
+                && !normalized.contains("for(let i=0;i<lines.length;i++)")) {
+            throw new LlmProcessingException("Generated code must iterate over lines using index-based for loop.");
+        }
+
+        if (!normalized.contains("lines[i].includes(expectedcommand)")) {
+            throw new LlmProcessingException("Generated code must use lines[i].includes(expectedCommand) matching logic.");
+        }
+
+        if (!normalized.contains("linenumber: i + 1") && !normalized.contains("linenumber:i+1")) {
+            throw new LlmProcessingException("Generated code must set PASS lineNumber to i + 1.");
+        }
+
+        if (!normalized.contains("linenumber: -1") && !normalized.contains("linenumber:-1")) {
+            throw new LlmProcessingException("Generated code must set FAIL lineNumber to -1.");
+        }
     }
 
     private String truncate(String value) {

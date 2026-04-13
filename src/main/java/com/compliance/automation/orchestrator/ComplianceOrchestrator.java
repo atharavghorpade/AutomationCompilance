@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import com.compliance.automation.exception.FileProcessingException;
+import com.compliance.automation.exception.JsExecutionException;
 import com.compliance.automation.executor.JSExecutor;
 import com.compliance.automation.generator.JSGeneratorService;
 import com.compliance.automation.model.ExpectedResult;
@@ -115,7 +117,7 @@ public class ComplianceOrchestrator {
 			return extractedRules;
 		} catch (IOException exception) {
 			log.error("Step 1 failed: unable to process uploaded PDF file", exception);
-			throw new RuntimeException("Failed to process uploaded PDF file", exception);
+			throw new FileProcessingException("Failed to process uploaded PDF file.", exception);
 		} finally {
 			if (tempPdf != null) {
 				try {
@@ -196,6 +198,14 @@ public class ComplianceOrchestrator {
 			Result result = jsExecutor.execute(entry.getValue(), config, entry.getKey());
 			results.add(result);
 		}
+
+		long errorCount = results.stream()
+				.filter(result -> result != null && "ERROR".equalsIgnoreCase(result.getStatus()))
+				.count();
+		if (!results.isEmpty() && errorCount == results.size()) {
+			throw new JsExecutionException("JavaScript execution failed for all generated rules.");
+		}
+
 		log.info("Step 3 completed: executed {} rules", results.size());
 		return results;
 	}

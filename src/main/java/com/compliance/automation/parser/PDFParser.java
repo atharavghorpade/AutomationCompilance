@@ -28,7 +28,11 @@ public class PDFParser {
 
 		try (PDDocument document = PDDocument.load(file, MemoryUsageSetting.setupTempFileOnly())) {
 			int totalPages = document.getNumberOfPages();
-			log.debug("PDF loaded successfully with {} pages", totalPages);
+			int totalBatches = totalPages == 0 ? 0 : ((totalPages - 1) / PAGE_BATCH_SIZE) + 1;
+			log.info("PDF loaded successfully with {} pages (batchSize={}, batches={})",
+					totalPages,
+					PAGE_BATCH_SIZE,
+					totalBatches);
 
 			PDFTextStripper stripper = new PDFTextStripper();
 			StringBuilder extractedText = new StringBuilder(Math.max(1024, totalPages * 512));
@@ -38,7 +42,6 @@ public class PDFParser {
 				stripper.setStartPage(startPage);
 				stripper.setEndPage(endPage);
 				extractedText.append(stripper.getText(document));
-				log.debug("Extracted PDF text for page range {}-{}", startPage, endPage);
 			}
 
 			String normalizedText = normalizeText(extractedText.toString());

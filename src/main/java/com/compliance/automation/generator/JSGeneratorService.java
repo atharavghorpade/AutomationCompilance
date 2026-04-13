@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.compliance.automation.exception.LlmProcessingException;
 import com.compliance.automation.llm.OllamaService;
 import com.compliance.automation.model.Rule;
 import org.slf4j.Logger;
@@ -29,6 +30,7 @@ public class JSGeneratorService {
 
     public Map<String, String> generateCheckFunctions(List<Rule> rules) {
         Map<String, String> result = new LinkedHashMap<>();
+        Exception lastGenerationError = null;
 
         if (rules == null || rules.isEmpty()) {
             log.warn("No rules provided for JavaScript generation");
@@ -51,10 +53,16 @@ public class JSGeneratorService {
                 }
 
                 result.put(rule.getRuleId(), jsCode);
-                log.info("Generated JavaScript for ruleId={}", rule.getRuleId());
+                log.debug("Generated JavaScript for ruleId={}", rule.getRuleId());
             } catch (Exception exception) {
+                lastGenerationError = exception;
                 log.warn("Failed to generate JavaScript for ruleId={}; continuing with next rule", rule.getRuleId(), exception);
             }
+        }
+
+        if (result.isEmpty() && lastGenerationError != null) {
+            throw new LlmProcessingException("Unable to generate JavaScript checks from LLM for the provided rules.",
+                    lastGenerationError);
         }
 
         log.info("Completed JavaScript generation: {} successful out of {} rules", result.size(), rules.size());

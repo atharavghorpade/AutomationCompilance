@@ -1,15 +1,13 @@
 package com.compliance.automation.controller;
 
+import com.compliance.automation.exception.FileProcessingException;
 import com.compliance.automation.model.ExpectedResult;
 import com.compliance.automation.model.Report;
 import com.compliance.automation.loader.ExpectedResultLoader;
-import com.compliance.automation.loader.ExpectedResultLoaderException;
 import com.compliance.automation.orchestrator.ComplianceOrchestrator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,7 +35,13 @@ public class ComplianceController {
 
     @PostMapping("/run")
     public ResponseEntity<Report> run(@RequestBody RunRequest request) {
+        log.info("API request received: endpoint=/api/run, type={}, configSize={}",
+            request == null ? null : request.type(),
+            request == null || request.config() == null ? 0 : request.config().length());
+
         Report report = complianceOrchestrator.runCompliance(request.config(), List.of(), null);
+        log.info("API request completed: endpoint=/api/run, total={}, passed={}, failed={}",
+            report.getTotal(), report.getPassed(), report.getFailed());
         return ResponseEntity.ok(report);
     }
 
@@ -54,7 +58,7 @@ public class ComplianceController {
             config = new String(configFile.getBytes(), StandardCharsets.UTF_8);
         } catch (IOException exception) {
             log.warn("Unable to read config file content", exception);
-            throw new IllegalArgumentException("Unable to read configFile content.", exception);
+            throw new FileProcessingException("Unable to read config file content.", exception);
         }
 
         log.info("Processing run-compliance request with type={}, configFile={}, expectedFile={}, pdfFilePresent={}",
@@ -64,34 +68,10 @@ public class ComplianceController {
                 pdfFile != null && !pdfFile.isEmpty());
 
         List<ExpectedResult> expectedResults = expectedResultLoader.load(expectedFile);
-
-        try {
-            Report report = complianceOrchestrator.runCompliance(config, expectedResults, pdfFile);
-            return ResponseEntity.ok(report);
-        } catch (RuntimeException exception) {
-            log.error("Failed to process run-compliance request", exception);
-            throw exception;
-        }
-    }
-
-    @ExceptionHandler(ExpectedResultLoaderException.class)
-    public ResponseEntity<ApiErrorResponse> handleExpectedResultLoaderException(ExpectedResultLoaderException ex) {
-        log.warn("Expected result parsing failed: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ApiErrorResponse("INVALID_EXPECTED_FILE", ex.getMessage()));
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
-        log.warn("Request validation failed: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ApiErrorResponse("INVALID_REQUEST", ex.getMessage()));
-    }
-
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiErrorResponse> handleRuntimeException(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ApiErrorResponse("PROCESSING_FAILED", "Failed to process compliance run."));
+        Report report = complianceOrchestrator.runCompliance(config, expectedResults, pdfFile);
+        log.info("API request completed: endpoint=/api/run-compliance, total={}, passed={}, failed={}",
+                report.getTotal(), report.getPassed(), report.getFailed());
+        return ResponseEntity.ok(report);
     }
 
     private void validateRequest(MultipartFile configFile, MultipartFile expectedFile, String type) {
@@ -114,8 +94,5 @@ public class ComplianceController {
     }
 
     public record RunRequest(String config, String type) {
-    }
-
-    public record ApiErrorResponse(String code, String message) {
     }
 }

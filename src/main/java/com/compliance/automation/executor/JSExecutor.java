@@ -57,11 +57,18 @@ public class JSExecutor {
                     extractString(executionResult, "evidence"),
                     extractInt(executionResult, "lineNumber"));
 
-            log.info("Execution result for ruleId={}: status={}, lineNumber={}",
-                    ruleId,
-                    result.getStatus(),
-                    result.getLineNumber());
-            log.debug("Execution evidence for ruleId={}: {}", ruleId, truncate(result.getEvidence()));
+            if ("PASS".equalsIgnoreCase(result.getStatus())) {
+                log.debug("Execution result for ruleId={}: status={}, lineNumber={}",
+                        ruleId,
+                        result.getStatus(),
+                        result.getLineNumber());
+            } else {
+                log.info("Execution result for ruleId={}: status={}, lineNumber={}, evidence={}",
+                        ruleId,
+                        result.getStatus(),
+                        result.getLineNumber(),
+                        truncate(result.getEvidence()));
+            }
             return result;
         } catch (PolyglotException exception) {
             if (exception.isSyntaxError()) {

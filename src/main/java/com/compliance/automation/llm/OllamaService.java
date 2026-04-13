@@ -3,6 +3,7 @@ package com.compliance.automation.llm;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.compliance.automation.exception.LlmProcessingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,7 +49,11 @@ Do not explain.
     public String generateCheckFunction(String expectedCommand) {
         String prompt = String.format(PROMPT_TEMPLATE, expectedCommand);
         String fullUrl = ollamaUrl + "/api/generate";
-        log.debug("LLM prompt for expectedCommand={}: {}", expectedCommand, truncate(prompt));
+        log.info("LLM request started (model={}, endpoint={}, expectedCommand={})",
+            MODEL,
+            fullUrl,
+            expectedCommand);
+        log.debug("LLM request prompt (trimmed): {}", truncate(prompt));
 
         Map<String, Object> request = new HashMap<>();
         request.put("model", MODEL);
@@ -57,19 +62,21 @@ Do not explain.
 
         try {
             String response = restTemplate.postForObject(fullUrl, request, String.class);
-            log.debug("LLM raw response: {}", truncate(response));
+            log.debug("LLM raw response (trimmed): {}", truncate(response));
             String generatedCode = extractGeneratedText(response);
-            log.debug("Generated JS from LLM: {}", truncate(generatedCode));
+            log.info("LLM request completed (generatedChars={})", generatedCode == null ? 0 : generatedCode.length());
+            log.debug("LLM generated JS (trimmed): {}", truncate(generatedCode));
             return generatedCode;
         } catch (Exception exception) {
             log.error("Failed to generate JS from Ollama for expectedCommand={}", expectedCommand, exception);
-            throw new RuntimeException("Failed to generate JS from Ollama: " + exception.getMessage(), exception);
+            throw new LlmProcessingException("Failed to generate JS from Ollama.", exception);
         }
     }
 
     public String generateCheckFunctionWithPrompt(String customPrompt) {
         String fullUrl = ollamaUrl + "/api/generate";
-        log.debug("LLM custom prompt: {}", truncate(customPrompt));
+        log.info("LLM retry request started (model={}, endpoint={})", MODEL, fullUrl);
+        log.debug("LLM custom prompt (trimmed): {}", truncate(customPrompt));
 
         Map<String, Object> request = new HashMap<>();
         request.put("model", MODEL);
@@ -78,13 +85,14 @@ Do not explain.
 
         try {
             String response = restTemplate.postForObject(fullUrl, request, String.class);
-            log.debug("LLM raw response: {}", truncate(response));
+            log.debug("LLM raw response (trimmed): {}", truncate(response));
             String generatedCode = extractGeneratedText(response);
-            log.debug("Generated JS from retry prompt: {}", truncate(generatedCode));
+            log.info("LLM retry request completed (generatedChars={})", generatedCode == null ? 0 : generatedCode.length());
+            log.debug("LLM generated JS from retry prompt (trimmed): {}", truncate(generatedCode));
             return generatedCode;
         } catch (Exception exception) {
             log.error("Failed to generate JS from Ollama with custom prompt", exception);
-            throw new RuntimeException("Failed to generate JS from Ollama: " + exception.getMessage(), exception);
+            throw new LlmProcessingException("Failed to generate JS from Ollama using retry prompt.", exception);
         }
     }
 
@@ -94,7 +102,7 @@ Do not explain.
             String generated = root.get("response").asText();
             return cleanGeneratedCode(generated);
         } catch (Exception exception) {
-            throw new RuntimeException("Failed to parse Ollama response: " + exception.getMessage(), exception);
+            throw new LlmProcessingException("Failed to parse Ollama response.", exception);
         }
     }
 
@@ -108,7 +116,7 @@ Do not explain.
         code = code.trim();
         
         if (!code.startsWith("function check")) {
-            throw new RuntimeException("Generated code does not contain function check(config)");
+            throw new LlmProcessingException("Generated code does not contain function check(config)");
         }
         
         return code;

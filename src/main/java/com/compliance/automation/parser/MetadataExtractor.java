@@ -31,6 +31,8 @@ public class MetadataExtractor {
             return List.of();
         }
 
+        log.info("Starting metadata extraction from PDF text (chars={})", pdfText.length());
+
         List<RuleCandidate> candidates = extractCandidates(pdfText);
         Map<String, Rule> uniqueRules = new LinkedHashMap<>();
 
@@ -46,7 +48,9 @@ public class MetadataExtractor {
                     candidate.type()));
         }
 
-        log.info("Extracted {} valid unique rules from {} candidates", uniqueRules.size(), candidates.size());
+        log.info("Metadata extraction completed: extractedRuleCount={}, candidateCount={}",
+                uniqueRules.size(),
+                candidates.size());
         return new ArrayList<>(uniqueRules.values());
     }
 

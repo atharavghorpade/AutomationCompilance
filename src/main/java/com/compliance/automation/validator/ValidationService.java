@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 public class ValidationService {
 
     private static final Logger log = LoggerFactory.getLogger(ValidationService.class);
+    private static final int MAX_MISMATCH_LOGS = 10;
 
     public ValidationResult validate(List<Result> actualResults, List<ExpectedResult> expectedResults) {
         List<String> failedRuleIds = new ArrayList<>();
@@ -97,7 +98,9 @@ public class ValidationService {
             log.info("Validation passed: all {} rules matched", actualMap.size());
         } else {
             log.warn("Validation completed with {} mismatches", failedRuleIds.size());
-            log.debug("Validation mismatch reasons: {}", mismatchReasons);
+            log.warn("Validation mismatch details (up to {}): {}",
+                    MAX_MISMATCH_LOGS,
+                    summarizeMismatches(mismatchReasons));
         }
         return new ValidationResult(matched, failedRuleIds, mismatchReasons);
     }
@@ -108,7 +111,14 @@ public class ValidationService {
             failedRuleIds.add(ruleId);
         }
         mismatchReasons.put(ruleId, reason);
-        log.warn("Validation mismatch for ruleId={}: {}", ruleId, reason);
+        log.debug("Validation mismatch captured for ruleId={}: {}", ruleId, reason);
+    }
+
+    private String summarizeMismatches(Map<String, String> mismatchReasons) {
+        return mismatchReasons.entrySet().stream()
+                .limit(MAX_MISMATCH_LOGS)
+                .map(entry -> entry.getKey() + " -> " + entry.getValue())
+                .collect(Collectors.joining(" | "));
     }
 
     private boolean ruleIdMatches(String actualRuleId, String expectedRuleId) {

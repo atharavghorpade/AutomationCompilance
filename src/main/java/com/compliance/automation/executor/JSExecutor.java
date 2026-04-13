@@ -74,6 +74,7 @@ public class JSExecutor {
             }
             log.error("Runtime error while executing JS for ruleId={}: {}", ruleId, exception.getMessage(), exception);
             return buildErrorResult(ruleId, "Runtime error: " + exception.getMessage());
+        }
     }
 
     private String extractString(Value value, String memberName) {
@@ -112,3 +113,4 @@ public class JSExecutor {
         return new Result(ruleId, STATUS_ERROR, message, -1);
     }
 }
+

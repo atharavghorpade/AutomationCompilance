@@ -62,21 +62,22 @@ public class ComplianceOrchestrator {
 
 	public Report runCompliance(String config, List<ExpectedResult> expectedResults, MultipartFile pdfFile) {
 		String safeConfig = config == null ? "" : config;
+		boolean pdfPresent = pdfFile != null && !pdfFile.isEmpty();
 		log.info("Starting compliance pipeline (configSize={}, pdfFilePresent={})",
 				safeConfig.length(),
-				pdfFile != null && !pdfFile.isEmpty());
+				pdfPresent);
 
-		List<Rule> rules = loadRules(pdfFile); // Step 1
+		List<Rule> rules = resolveRulesForExecution(pdfFile, pdfPresent); // Step 1
 		Map<String, String> jsByRuleId = generateJavaScript(rules); // Step 2
 		List<Result> results = executeRules(jsByRuleId, safeConfig); // Step 3
 		List<ExpectedResult> safeExpectedResults = loadExpectedResults(expectedResults); // Step 4
 
-		ValidationResult validationResult = validationService.validate(results, safeExpectedResults); // Step 5
+		ValidationResult validationResult = validateResults(results, safeExpectedResults); // Step 5
 		if (!validationResult.isMatched()) {
 			results = retryFailedRules(results, validationResult, safeConfig, safeExpectedResults); // Step 6
 		}
 
-		Report report = reportGenerator.generateReport(results, safeExpectedResults); // Step 7
+		Report report = generateReport(results, safeExpectedResults); // Step 7
 		saveOutputs(jsByRuleId, report); // Step 8
 
 		log.info("Compliance pipeline completed (total={}, passed={}, failed={})",
@@ -84,11 +85,17 @@ public class ComplianceOrchestrator {
 		return report;
 	}
 
-	private List<Rule> loadRules(MultipartFile pdfFile) {
-		if (pdfFile == null || pdfFile.isEmpty()) {
-			log.info("No pdfFile provided. Using fallback metadata source");
-			return metadataExtractor.extractRulesFromFile(null);
+	private List<Rule> resolveRulesForExecution(MultipartFile pdfFile, boolean pdfPresent) {
+		if (pdfPresent) {
+			return parsePdfExtractMetadataAndSave(pdfFile);
 		}
+
+		log.info("Step 1 skipped: no pdfFile provided. Loading default rules");
+		return loadDefaultRules();
+	}
+
+	private List<Rule> parsePdfExtractMetadataAndSave(MultipartFile pdfFile) {
+		log.info("Step 1: parsing PDF, extracting metadata, and saving metadata.json");
 
 		Path tempPdf = null;
 		try {
@@ -98,16 +105,16 @@ public class ComplianceOrchestrator {
 
 			String pdfText = pdfParser.extractText(tempPdf.toFile());
 			List<Rule> extractedRules = metadataExtractor.extractRules(pdfText);
+			fileStorageService.saveMetadata(extractedRules);
+			log.info("Step 1 completed: extracted {} rules from PDF", extractedRules.size());
 
 			if (extractedRules.isEmpty()) {
-				log.warn("No rules extracted from PDF. Falling back to default rules");
-				extractedRules = metadataExtractor.extractRulesFromFile(null);
+				log.warn("No rules extracted from PDF. Falling back to default rules for downstream execution");
+				return loadDefaultRules();
 			}
-
-			fileStorageService.saveMetadata(extractedRules);
 			return extractedRules;
 		} catch (IOException exception) {
-			log.error("Failed to process uploaded PDF file", exception);
+			log.error("Step 1 failed: unable to process uploaded PDF file", exception);
 			throw new RuntimeException("Failed to process uploaded PDF file", exception);
 		} finally {
 			if (tempPdf != null) {
@@ -120,23 +127,41 @@ public class ComplianceOrchestrator {
 		}
 	}
 
+	private List<Rule> loadDefaultRules() {
+		List<Rule> defaultRules = metadataExtractor.extractRulesFromFile(null);
+		log.info("Loaded {} default rules", defaultRules.size());
+		return defaultRules;
+	}
+
 	private Map<String, String> generateJavaScript(List<Rule> rules) {
+		log.info("Step 2: generating JavaScript checks for {} rules", rules.size());
 		Map<String, String> jsByRuleId = jsGeneratorService.generateCheckFunctions(rules);
-		log.info("Generated JavaScript functions for {} rules", jsByRuleId.size());
+		log.info("Step 2 completed: generated JavaScript functions for {} rules", jsByRuleId.size());
 		return jsByRuleId;
 	}
 
 	private List<ExpectedResult> loadExpectedResults(List<ExpectedResult> expectedResults) {
+		log.info("Step 4: loading expected results");
 		List<ExpectedResult> safeExpectedResults = Objects.requireNonNull(expectedResults,
 				"expectedResults must not be null");
-		log.info("Loaded {} expected results", safeExpectedResults.size());
+		log.info("Step 4 completed: loaded {} expected results", safeExpectedResults.size());
 		return safeExpectedResults;
+	}
+
+	private ValidationResult validateResults(List<Result> results, List<ExpectedResult> expectedResults) {
+		log.info("Step 5: validating execution results");
+		ValidationResult validationResult = validationService.validate(results, expectedResults);
+		log.info("Step 5 completed: validationMatched={}, failedRuleCount={}",
+				validationResult.isMatched(),
+				validationResult.getFailedRuleIds().size());
+		return validationResult;
 	}
 
 	private List<Result> retryFailedRules(List<Result> currentResults,
 			ValidationResult validationResult,
 			String config,
 			List<ExpectedResult> expectedResults) {
+		log.info("Step 6: retrying {} failed rules", validationResult.getFailedRuleIds().size());
 		Map<String, ExpectedResult> expectedByRuleId = mapExpectedByRuleId(expectedResults);
 		List<Result> retriedResults = retryEngine.retryFailedRules(
 				validationResult.getFailedRuleIds(),
@@ -144,21 +169,34 @@ public class ComplianceOrchestrator {
 				expectedByRuleId);
 
 		mergeRetryResults(currentResults, retriedResults);
+		log.info("Step 6 completed: merged {} retried results", retriedResults.size());
 		return currentResults;
 	}
 
+	private Report generateReport(List<Result> results, List<ExpectedResult> expectedResults) {
+		log.info("Step 7: generating report");
+		Report report = reportGenerator.generateReport(results, expectedResults);
+		log.info("Step 7 completed: total={}, passed={}, failed={}",
+				report.getTotal(), report.getPassed(), report.getFailed());
+		return report;
+	}
+
 	private void saveOutputs(Map<String, String> jsByRuleId, Report report) {
+		log.info("Step 8: saving generated outputs");
 		saveGeneratedJavaScript(jsByRuleId);
 		String reportJson = reportGenerator.exportToJson(report);
 		fileStorageService.saveReport("report.json", reportJson);
+		log.info("Step 8 completed: outputs saved");
 	}
 
 	private List<Result> executeRules(Map<String, String> jsByRuleId, String config) {
+		log.info("Step 3: executing JavaScript checks");
 		List<Result> results = new ArrayList<>();
 		for (Map.Entry<String, String> entry : jsByRuleId.entrySet()) {
 			Result result = jsExecutor.execute(entry.getValue(), config, entry.getKey());
 			results.add(result);
 		}
+		log.info("Step 3 completed: executed {} rules", results.size());
 		return results;
 	}
 

@@ -1,0 +1,111 @@
+{
+  "info": {
+    "_postman_id": "9f8d4d4e-6f2f-4d14-9f7f-1a8e9a7b4c10",
+    "name": "Compliance Automation APIs",
+    "description": "Endpoints for compliance run, full run-compliance flow, and health check.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET /test",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/test",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "test"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /api/run",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"CIS\",\n  \"config\": \"hostname router1\\nservice tcp-keepalives-in\\naaa new-model\\nip ssh version 2\\n\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/run",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "run"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /api/run-compliance",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "configFile",
+              "type": "file",
+              "src": ""
+            },
+            {
+              "key": "expectedFile",
+              "type": "file",
+              "src": ""
+            },
+            {
+              "key": "pdfFile",
+              "type": "file",
+              "src": ""
+            },
+            {
+              "key": "type",
+              "type": "text",
+              "value": "CIS"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/run-compliance",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "run-compliance"
+          ]
+        },
+        "description": "Important: expectedFile must be JSON array with objects: ruleId, status, lineNumber."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}

@@ -222,7 +222,14 @@ public class ComplianceOrchestrator {
 
 	private Map<String, ExpectedResult> mapExpectedByRuleId(List<ExpectedResult> expectedResults) {
 		Map<String, ExpectedResult> expectedByRuleId = new HashMap<>();
+		if (expectedResults == null) {
+			return expectedByRuleId;
+		}
+
 		for (ExpectedResult expectedResult : expectedResults) {
+			if (expectedResult == null || expectedResult.getRuleId() == null || expectedResult.getRuleId().isBlank()) {
+				continue;
+			}
 			expectedByRuleId.put(expectedResult.getRuleId(), expectedResult);
 		}
 		return expectedByRuleId;

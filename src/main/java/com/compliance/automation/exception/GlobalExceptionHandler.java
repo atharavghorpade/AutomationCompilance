@@ -96,9 +96,13 @@ public class GlobalExceptionHandler {
             RuntimeException exception,
             HttpServletRequest request) {
         log.error("Unhandled processing error for request {}", request.getRequestURI(), exception);
+		String reason = exception.getMessage();
+		String message = (reason == null || reason.isBlank())
+				? "Failed to process compliance run."
+				: "Failed to process compliance run: " + reason;
         return build(HttpStatus.INTERNAL_SERVER_ERROR,
                 "PROCESSING_FAILED",
-                "Failed to process compliance run.",
+                                message,
                 request.getRequestURI());
     }
 

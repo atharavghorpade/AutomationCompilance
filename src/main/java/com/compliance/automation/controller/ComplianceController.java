@@ -46,8 +46,8 @@ public class ComplianceController {
             @RequestParam("type") String type) {
         log.info("Processing run-compliance request with type={}, configFile={}, expectedFile={}, pdfFilePresent={}",
                 type,
-                configFile.getOriginalFilename(),
-                expectedFile.getOriginalFilename(),
+            configFile == null ? null : configFile.getOriginalFilename(),
+            expectedFile == null ? null : expectedFile.getOriginalFilename(),
                 pdfFile != null && !pdfFile.isEmpty());
 
         Report report = complianceRequestService.runWithFiles(configFile, expectedFile, pdfFile, type);

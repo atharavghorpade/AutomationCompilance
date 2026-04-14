@@ -1,0 +1,341 @@
+[ {
+  "ruleId" : "1.1.1",
+  "description" : "Enable 'aaa new-model' (Automated) ................................................................................................ 15",
+  "expectedCommand" : "aaa new-model",
+  "type" : "AAA"
+}, {
+  "ruleId" : "1.1.2",
+  "description" : "Enable 'aaa authentication login' (Automated) ................................................................................... 17",
+  "expectedCommand" : "aaa new-model",
+  "type" : "AAA"
+}, {
+  "ruleId" : "1.1.3",
+  "description" : "Enable 'aaa authentication enable default' (Automated) .................................................................... 19",
+  "expectedCommand" : "aaa new-model",
+  "type" : "AAA"
+}, {
+  "ruleId" : "1.1.4",
+  "description" : "Set 'login authentication for 'line vty' (Automated) .............................................................................. 21",
+  "expectedCommand" : "aaa new-model",
+  "type" : "AAA"
+}, {
+  "ruleId" : "1.1.5",
+  "description" : "Set 'login authentication for 'ip http' (Automated) ............................................................................... 23",
+  "expectedCommand" : "aaa new-model",
+  "type" : "AAA"
+}, {
+  "ruleId" : "1.2.2",
+  "description" : "Set 'transport input ssh' for 'line vty' connections (Automated) .......................................................... 37",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.2.3",
+  "description" : "Set 'no exec' for 'line aux 0' (Automated) ........................................................................................... 39",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.2.4",
+  "description" : "Create 'access-list' for use with 'line vty' (Automated) ........................................................................ 41",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.2.5",
+  "description" : "Set 'access-class' for 'line vty' (Automated) ....................................................................................... 43",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.2.6",
+  "description" : "Set 'exec-timeout' to less than or equal to 10 minutes for 'line aux 0' (Automated) ............................ 45",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.2.7",
+  "description" : "Set 'exec-timeout' to less than or equal to 10 minutes 'line console 0' (Automated) .......................... 47",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.2.8",
+  "description" : "Set 'exec-timeout' to less than or equal to 10 minutes 'line vty' (Automated) ..................................... 49",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.2.9",
+  "description" : "Set 'transport input none' for 'line aux 0' (Automated) ........................................................................ 51",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.2.10",
+  "description" : "Set 'http Secure-server' limit (Automated) ........................................................................................ 53",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.2.11",
+  "description" : "Set 'exec-timeout' to less than or equal to 10 min on 'ip http' (Automated) ...................................... 55",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.3.1",
+  "description" : "Set the 'banner-text' for 'banner exec' (Automated) ........................................................................... 58",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.3.2",
+  "description" : "Set the 'banner-text' for 'banner login' (Automated) ........................................................................... 60",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.3.3",
+  "description" : "Set the 'banner-text' for 'banner motd' (Automated) ........................................................................... 62",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.4.2",
+  "description" : "Enable 'service password-encryption' (Automated) ........................................................................... 70",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.4.3",
+  "description" : "Set 'username secret' for all local users (Automated) ........................................................................ 72",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.1",
+  "description" : "Set 'no snmp-server' to disable SNMP when unused (Automated) .................................................... 76",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.2",
+  "description" : "Unset 'private' for 'snmp-server community' (Automated) .................................................................. 78",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.3",
+  "description" : "Unset 'public' for 'snmp-server community' (Automated) .................................................................... 80",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.4",
+  "description" : "Do not set 'RW' for any 'snmp-server community' (Automated) ......................................................... 82",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.5",
+  "description" : "Set the ACL for each 'snmp-server community' (Automated) ............................................................. 84",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.6",
+  "description" : "Create an 'access-list' for use with SNMP (Automated) ..................................................................... 86",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.7",
+  "description" : "Set 'snmp-server host' when using SNMP (Automated) ..................................................................... 88",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.8",
+  "description" : "Set 'snmp-server enable traps snmp' (Automated) ............................................................................ 90",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.9",
+  "description" : "Set 'priv' for each 'snmp-server group' using SNMPv3 (Automated) .................................................. 92",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "2.1.1",
+  "description" : ".1.2 Set the 'ip domain-name' (Automated) ....................................................................................... 109",
+  "expectedCommand" : "ip ssh version 2",
+  "type" : "SSH"
+}, {
+  "ruleId" : "2.1.2",
+  "description" : "Set 'no cdp run' (Automated) ............................................................................................................ 119",
+  "expectedCommand" : "ip ssh version 2",
+  "type" : "SSH"
+}, {
+  "ruleId" : "2.1.3",
+  "description" : "Set 'no ip bootp server' (Automated) ................................................................................................ 121",
+  "expectedCommand" : "ip ssh version 2",
+  "type" : "SSH"
+}, {
+  "ruleId" : "2.1.4",
+  "description" : "Set 'no service dhcp' (Automated) ................................................................................................... 123",
+  "expectedCommand" : "ip ssh version 2",
+  "type" : "SSH"
+}, {
+  "ruleId" : "2.1.5",
+  "description" : "Set 'no ip identd' (Automated) .......................................................................................................... 125",
+  "expectedCommand" : "ip ssh version 2",
+  "type" : "SSH"
+}, {
+  "ruleId" : "2.1.6",
+  "description" : "Set 'service tcp-keepalives-in' (Automated) ..................................................................................... 127",
+  "expectedCommand" : "service tcp-keepalives-in",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "2.1.7",
+  "description" : "Set 'service tcp-keepalives-out' (Automated) ................................................................................... 129",
+  "expectedCommand" : "service tcp-keepalives-in",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "2.1.8",
+  "description" : "Set 'no service pad' (Automated) ..................................................................................................... 130",
+  "expectedCommand" : "service tcp-keepalives-in",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "2.2.1",
+  "description" : "Set 'logging enable' (Automated) ..................................................................................................... 133",
+  "expectedCommand" : "service tcp-keepalives-out",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "2.2.2",
+  "description" : "Set 'buffer size' for 'logging buffered' (Automated) ........................................................................... 135",
+  "expectedCommand" : "service tcp-keepalives-out",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "2.2.3",
+  "description" : "Set 'logging console critical' (Automated) ......................................................................................... 137",
+  "expectedCommand" : "logging buffered",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "2.2.4",
+  "description" : "Set IP address for 'logging host' (Automated) .................................................................................. 139",
+  "expectedCommand" : "logging buffered",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "2.2.5",
+  "description" : "Set 'logging trap informational' (Automated) .................................................................................... 141",
+  "expectedCommand" : "logging buffered",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "2.2.6",
+  "description" : "Set 'service timestamps debug datetime' (Automated) .................................................................... 143",
+  "expectedCommand" : "logging buffered",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "2.3.1",
+  "description" : "Require Encryption Keys for NTP ........................................................................................ 149",
+  "expectedCommand" : "ntp trusted-key",
+  "type" : "NTP"
+}, {
+  "ruleId" : "2.3.2",
+  "description" : "Set 'ip address' for 'ntp server' (Automated) ..................................................................................... 158",
+  "expectedCommand" : "ntp trusted-key",
+  "type" : "NTP"
+}, {
+  "ruleId" : "2.4.1",
+  "description" : "Create a single 'interface loopback' (Automated) ............................................................................. 161",
+  "expectedCommand" : "ntp trusted-key",
+  "type" : "NTP"
+}, {
+  "ruleId" : "2.4.2",
+  "description" : "Set AAA 'source-interface' (Automated) ........................................................................................... 163",
+  "expectedCommand" : "ntp server",
+  "type" : "NTP"
+}, {
+  "ruleId" : "2.4.3",
+  "description" : "Set 'ntp source' to Loopback Interface (Automated) ........................................................................ 165",
+  "expectedCommand" : "ntp server",
+  "type" : "NTP"
+}, {
+  "ruleId" : "3.1.4",
+  "description" : "Set 'ip verify unicast source reachable-via' (Automated) .................................................................. 176",
+  "expectedCommand" : "ip access-group",
+  "type" : "ACL"
+}, {
+  "ruleId" : "3.2.1",
+  "description" : "Set 'ip access-list extended' to Forbid Private Source Addresses from External Networks",
+  "expectedCommand" : "ip access-group",
+  "type" : "ACL"
+}, {
+  "ruleId" : "3.2.2",
+  "description" : "Set inbound 'ip access-group' on the External Interface (Automated) .............................................. 181",
+  "expectedCommand" : "ip access-group",
+  "type" : "ACL"
+}, {
+  "ruleId" : "3.3.1",
+  "description" : "Require EIGRP Authentication if Protocol is Used ............................................................. 183",
+  "expectedCommand" : "ip access-group",
+  "type" : "ACL"
+}, {
+  "ruleId" : "1.1.6",
+  "description" : "Set 'aaa accounting' to log all privileged use commands",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.4.1",
+  "description" : "Set 'password' for 'enable secret'  ",
+  "expectedCommand" : "ip ssh version 2",
+  "type" : "SSH"
+}, {
+  "ruleId" : "2.2.7",
+  "description" : "Set 'logging source interface'  ",
+  "expectedCommand" : "ntp trusted-key",
+  "type" : "NTP"
+}, {
+  "ruleId" : "2.2.8",
+  "description" : "Set 'login success/failure logging'  ",
+  "expectedCommand" : "ntp trusted-key",
+  "type" : "NTP"
+}, {
+  "ruleId" : "2.4.4",
+  "description" : "Set 'ip tftp source-interface' to the Loopback Interface  ",
+  "expectedCommand" : "ntp server",
+  "type" : "NTP"
+}, {
+  "ruleId" : "1.6.1",
+  "description" : "Configure Login Block  ",
+  "expectedCommand" : "service tcp-keepalives-out",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.6.2",
+  "description" : "AutoSecure  ",
+  "expectedCommand" : "service tcp-keepalives-out",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.6.3",
+  "description" : "Configuring Kerberos  ",
+  "expectedCommand" : "service tcp-keepalives-out",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.6.4",
+  "description" : "Configure Web interface  ",
+  "expectedCommand" : "service tcp-keepalives-out",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "3.3.2",
+  "description" : ".1 Set 'authentication message-digest' for OSPF area  ",
+  "expectedCommand" : "service tcp-keepalives-out",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "3.3.3",
+  "description" : ".1 Set 'key chain'  ",
+  "expectedCommand" : "service tcp-keepalives-out",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.1.9",
+  "description" : "Set 'aaa accounting network'  ",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.1.10",
+  "description" : "Set 'aaa accounting system'  ",
+  "expectedCommand" : "exec-timeout",
+  "type" : "GENERAL"
+}, {
+  "ruleId" : "1.3.4",
+  "description" : "Set the 'banner-text' for 'webauth banner'  ",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "1.5.10",
+  "description" : "Require 'aes 128' as minimum for 'snmp-server user'",
+  "expectedCommand" : "snmp-server community",
+  "type" : "SNMP"
+}, {
+  "ruleId" : "3.1.1",
+  "description" : "Set 'no ip source-route'  ",
+  "expectedCommand" : "service tcp-keepalives-in",
+  "type" : "GENERAL"
+} ]

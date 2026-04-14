@@ -7,7 +7,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.compliance.automation.exception.LlmProcessingException;
 import com.compliance.automation.formatter.CISFormatter;
+import com.compliance.automation.formatter.STIGFormatter;
 import com.compliance.automation.llm.OllamaService;
+import com.compliance.automation.model.ComplianceType;
 import com.compliance.automation.model.Rule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,15 +32,17 @@ public class JSGeneratorService {
 
     private final OllamaService ollamaService;
     private final CISFormatter cisFormatter;
+    private final STIGFormatter stigFormatter;
     private final Map<String, String> jsCodeCache;
 
-    public JSGeneratorService(OllamaService ollamaService, CISFormatter cisFormatter) {
+    public JSGeneratorService(OllamaService ollamaService, CISFormatter cisFormatter, STIGFormatter stigFormatter) {
         this.ollamaService = ollamaService;
         this.cisFormatter = cisFormatter;
+        this.stigFormatter = stigFormatter;
         this.jsCodeCache = new ConcurrentHashMap<>();
     }
 
-    public Map<String, String> generateCheckFunctions(List<Rule> rules) {
+    public Map<String, String> generateCheckFunctions(List<Rule> rules, ComplianceType complianceType) {
         Map<String, String> result = new LinkedHashMap<>();
         Exception lastGenerationError = null;
 
@@ -56,7 +60,7 @@ public class JSGeneratorService {
             }
 
             try {
-                String jsCode = generateOrRetrieveCheckFunction(rule);
+                String jsCode = generateOrRetrieveCheckFunction(rule, complianceType);
                 if (jsCode == null || jsCode.isBlank()) {
                     log.warn("No JavaScript generated for ruleId={}", rule.getRuleId());
                     continue;
@@ -79,12 +83,16 @@ public class JSGeneratorService {
         return result;
     }
 
-    private String generateOrRetrieveCheckFunction(Rule rule) {
+    public Map<String, String> generateCheckFunctions(List<Rule> rules) {
+        return generateCheckFunctions(rules, ComplianceType.CIS);
+    }
+
+    private String generateOrRetrieveCheckFunction(Rule rule, ComplianceType complianceType) {
         String cacheKey = rule.getRuleId();
 
         if (jsCodeCache.containsKey(cacheKey)) {
             String cachedJs = jsCodeCache.get(cacheKey);
-            if (isValidJavaScript(cachedJs)) {
+            if (isValidJavaScript(cachedJs, complianceType)) {
                 log.debug("Using cached JavaScript for ruleId={}", cacheKey);
                 return cachedJs;
             }
@@ -93,7 +101,7 @@ public class JSGeneratorService {
             jsCodeCache.remove(cacheKey);
         }
 
-        String jsCode = cisFormatter.format(generateValidJavaScript(rule));
+        String jsCode = formatGeneratedJavaScript(generateValidJavaScript(rule), complianceType);
         log.debug("Validated JS for ruleId={}: {}", cacheKey, truncate(jsCode));
         jsCodeCache.put(cacheKey, jsCode);
         return jsCode;
@@ -101,14 +109,14 @@ public class JSGeneratorService {
 
     private String generateValidJavaScript(Rule rule) {
         String firstAttempt = ollamaService.generateCheckFunction(rule.getExpectedCommand());
-        if (isValidJavaScript(firstAttempt)) {
+        if (isValidJavaScript(firstAttempt, ComplianceType.CIS)) {
             return firstAttempt;
         }
 
         log.warn("Generated JS is invalid for ruleId={}; retrying once", rule.getRuleId());
 
         String secondAttempt = ollamaService.generateCheckFunction(rule.getExpectedCommand());
-        if (isValidJavaScript(secondAttempt)) {
+        if (isValidJavaScript(secondAttempt, ComplianceType.CIS)) {
             return secondAttempt;
         }
 
@@ -118,16 +126,36 @@ public class JSGeneratorService {
                         + ". Required tokens: 'function check' and 'status'.");
     }
 
-    private boolean isValidJavaScript(String jsCode) {
+    private String formatGeneratedJavaScript(String jsCode, ComplianceType complianceType) {
+        if (complianceType == ComplianceType.STIG) {
+            return stigFormatter.format(jsCode);
+        }
+
+        return cisFormatter.format(jsCode);
+    }
+
+    private boolean isValidJavaScript(String jsCode, ComplianceType complianceType) {
         if (jsCode == null || jsCode.isBlank()) {
             return false;
         }
 
         String normalized = jsCode.toLowerCase();
+        if (complianceType == ComplianceType.STIG) {
+            return normalized.contains("var result = {")
+                    && normalized.contains("findingdetails")
+                    && normalized.contains("line: -1")
+                    && normalized.contains("result.status = \"pass\"")
+                    && normalized.contains("result.status = \"fail\"")
+                    && (normalized.contains(LINE_SPLIT_TOKEN_DOUBLE_QUOTE)
+                        || normalized.contains(LINE_SPLIT_TOKEN_SINGLE_QUOTE))
+                    && (normalized.contains(MATCH_TOKEN_DOUBLE_QUOTE)
+                        || normalized.contains(MATCH_TOKEN_SINGLE_QUOTE));
+        }
+
         return normalized.contains(CHECK_FUNCTION_SIGNATURE)
                 && normalized.contains(STATUS_KEYWORD)
-            && (normalized.contains(LINE_SPLIT_TOKEN_DOUBLE_QUOTE)
-                || normalized.contains(LINE_SPLIT_TOKEN_SINGLE_QUOTE))
+                && (normalized.contains(LINE_SPLIT_TOKEN_DOUBLE_QUOTE)
+                    || normalized.contains(LINE_SPLIT_TOKEN_SINGLE_QUOTE))
                 && (normalized.contains(MATCH_TOKEN_DOUBLE_QUOTE)
                     || normalized.contains(MATCH_TOKEN_SINGLE_QUOTE))
                 && normalized.contains(PASS_LINE_NUMBER_TOKEN)

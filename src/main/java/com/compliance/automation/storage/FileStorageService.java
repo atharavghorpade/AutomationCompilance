@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import com.compliance.automation.exception.FileProcessingException;
+import com.compliance.automation.model.ComplianceType;
 import com.compliance.automation.model.Rule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -29,10 +30,18 @@ public class FileStorageService {
 		this.objectMapper = objectMapper;
 	}
 
+	public Path saveJavaScript(ComplianceType complianceType, Rule rule, String jsCode) {
+		ComplianceType safeType = complianceType == null ? ComplianceType.CIS : complianceType;
+		Rule safeRule = rule == null ? new Rule() : rule;
+		String ruleId = safeRule.getRuleId() == null || safeRule.getRuleId().isBlank() ? "unknown" : safeRule.getRuleId();
+		String fileName = "rule_" + ruleId + ".js";
+		String directory = JS_OUTPUT_DIR + "/" + safeType.name().toLowerCase();
+		String content = combineMetadataAndFormattedJs(safeRule, jsCode);
+		return saveFile(directory, fileName, content);
+	}
+
 	public Path saveJavaScript(String ruleId, String jsCode) {
-		String fileName = ruleId + ".js";
-		String formattedJsCode = formatJavaScriptCode(jsCode);
-		return saveFile(JS_OUTPUT_DIR, fileName, formattedJsCode);
+		return saveJavaScript(ComplianceType.CIS, new Rule(ruleId, null, null, ComplianceType.CIS.name()), jsCode);
 	}
 
 	public Path saveReport(String fileName, String reportContent) {
@@ -83,5 +92,21 @@ public class FileStorageService {
 		}
 
 		return normalized + System.lineSeparator();
+	}
+
+	private String combineMetadataAndFormattedJs(Rule rule, String jsCode) {
+		StringBuilder content = new StringBuilder();
+		content.append("/*").append(System.lineSeparator());
+		content.append("ruleId: ").append(safeValue(rule.getRuleId())).append(System.lineSeparator());
+		content.append("description: ").append(safeValue(rule.getDescription())).append(System.lineSeparator());
+		content.append("expectedCommand: ").append(safeValue(rule.getExpectedCommand())).append(System.lineSeparator());
+		content.append("type: ").append(safeValue(rule.getType())).append(System.lineSeparator());
+		content.append("*/").append(System.lineSeparator());
+		content.append(formatJavaScriptCode(jsCode));
+		return content.toString();
+	}
+
+	private String safeValue(String value) {
+		return value == null || value.isBlank() ? "" : value;
 	}
 }

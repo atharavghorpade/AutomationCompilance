@@ -18,6 +18,7 @@ public class MetadataExtractor {
 
     private static final Logger log = LoggerFactory.getLogger(MetadataExtractor.class);
     private static final Pattern RULE_ID_PATTERN = Pattern.compile("\\b(\\d+\\.\\d+\\.\\d+)\\b");
+    private static final Pattern VALID_RULE_ID_PATTERN = Pattern.compile("^\\d+(?:\\.\\d+)+$");
 
     private final PDFParser pdfParser;
 
@@ -33,24 +34,32 @@ public class MetadataExtractor {
 
         log.info("Starting metadata extraction from PDF text (chars={})", pdfText.length());
 
-        List<RuleCandidate> candidates = extractCandidates(pdfText);
         Map<String, Rule> uniqueRules = new LinkedHashMap<>();
+        int invalidCandidateCount = 0;
+        int duplicateCount = 0;
 
-        for (RuleCandidate candidate : candidates) {
+        for (RuleCandidate candidate : extractCandidates(pdfText)) {
             if (!isValidCandidate(candidate)) {
+                invalidCandidateCount++;
                 continue;
             }
 
-            uniqueRules.putIfAbsent(candidate.ruleId(), new Rule(
+            Rule rule = new Rule(
                     candidate.ruleId(),
                     candidate.title(),
                     candidate.expectedCommand(),
-                    candidate.type()));
+                    candidate.type());
+
+            Rule existingRule = uniqueRules.putIfAbsent(candidate.ruleId(), rule);
+            if (existingRule != null) {
+                duplicateCount++;
+            }
         }
 
-        log.info("Metadata extraction completed: extractedRuleCount={}, candidateCount={}",
+        log.info("Metadata extraction completed: extractedRuleCount={}, invalidCandidates={}, duplicatesIgnored={}",
                 uniqueRules.size(),
-                candidates.size());
+                invalidCandidateCount,
+                duplicateCount);
         return new ArrayList<>(uniqueRules.values());
     }
 
@@ -119,10 +128,13 @@ public class MetadataExtractor {
             Matcher matcher = RULE_ID_PATTERN.matcher(line);
 
             while (matcher.find()) {
-                String ruleId = matcher.group(1).trim();
+                String ruleId = normalizeRuleId(matcher.group(1));
+                if (!isValidRuleId(ruleId)) {
+                    continue;
+                }
+
                 String title = extractTitle(lines, i, matcher.end());
-                String context = buildContext(lines, i, 5);
-                String expectedCommand = matchExpectedCommand(context + " " + title);
+                String expectedCommand = extractExpectedCommand(lines, i, title);
                 String type = inferType(expectedCommand);
 
                 candidates.add(new RuleCandidate(ruleId, title, expectedCommand, type));
@@ -153,6 +165,24 @@ public class MetadataExtractor {
             String nextLine = lines.get(i).trim();
             if (!nextLine.isBlank() && !RULE_ID_PATTERN.matcher(nextLine).find()) {
                 return nextLine;
+            }
+        }
+
+        return "";
+    }
+
+    private String extractExpectedCommand(List<String> lines, int currentIndex, String title) {
+        String candidateText = buildContext(lines, currentIndex, 4) + " " + title;
+        String expectedCommand = matchExpectedCommand(candidateText);
+        if (!expectedCommand.isBlank()) {
+            return expectedCommand;
+        }
+
+        for (int i = currentIndex + 1; i < Math.min(lines.size(), currentIndex + 5); i++) {
+            String nearbyText = lines.get(i);
+            expectedCommand = matchExpectedCommand(nearbyText + " " + title);
+            if (!expectedCommand.isBlank()) {
+                return expectedCommand;
             }
         }
 
@@ -211,6 +241,14 @@ public class MetadataExtractor {
         return "";
     }
 
+    private String normalizeRuleId(String ruleId) {
+        return ruleId == null ? "" : ruleId.trim();
+    }
+
+    private boolean isValidRuleId(String ruleId) {
+        return ruleId != null && !ruleId.isBlank() && VALID_RULE_ID_PATTERN.matcher(ruleId).matches();
+    }
+
     private String inferType(String expectedCommand) {
         if (expectedCommand == null || expectedCommand.isBlank()) {
             return "GENERAL";
@@ -236,8 +274,7 @@ public class MetadataExtractor {
 
     private boolean isValidCandidate(RuleCandidate candidate) {
         return candidate != null
-                && candidate.ruleId() != null
-                && !candidate.ruleId().isBlank()
+                && isValidRuleId(candidate.ruleId())
                 && candidate.title() != null
                 && !candidate.title().isBlank()
                 && candidate.expectedCommand() != null

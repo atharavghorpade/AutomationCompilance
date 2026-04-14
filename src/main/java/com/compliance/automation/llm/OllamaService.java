@@ -24,13 +24,11 @@ Output ONLY JavaScript.
 No explanation.
 No markdown.
 
-Generate this exact format and replace EXPECTED_COMMAND with this value: %s
-
 function check(config) {
     const lines = config.split("\\n");
 
     for (let i = 0; i < lines.length; i++) {
-        if (lines[i].includes("EXPECTED_COMMAND")) {
+        if (lines[i].includes("%s")) {
             return {
                 status: "PASS",
                 evidence: lines[i],
@@ -151,7 +149,7 @@ function check(config) {
             throw new LlmProcessingException("Generated code must iterate over lines using index-based for loop.");
         }
 
-        if (!normalized.contains("lines[i].includes(\"") && !normalized.contains("lines[i].includes('\")) {
+        if (!normalized.contains("lines[i].includes(\"") && !normalized.contains("lines[i].includes('") ) {
             throw new LlmProcessingException("Generated code must use lines[i].includes(\"EXPECTED_COMMAND\") matching logic.");
         }
 

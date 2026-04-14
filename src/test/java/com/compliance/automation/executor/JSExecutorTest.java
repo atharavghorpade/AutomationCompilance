@@ -1,7 +1,6 @@
 package com.compliance.automation.executor;
 
 import com.compliance.automation.model.Result;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +12,7 @@ class JSExecutorTest {
 
     @BeforeEach
     void setUp() {
-        jsExecutor = new JSExecutor(new ObjectMapper());
+        jsExecutor = new JSExecutor();
     }
 
     @Test
@@ -72,7 +71,7 @@ function check(config) {
 
         assertNotNull(result);
         assertEquals(ruleId, result.getRuleId());
-        assertEquals("INVALID_JS", result.getStatus());
+        assertEquals("ERROR", result.getStatus());
         assertNotNull(result.getEvidence());
         assertEquals(-1, result.getLineNumber());
     }
@@ -87,7 +86,7 @@ function check(config) {
 
         assertNotNull(result);
         assertEquals(ruleId, result.getRuleId());
-        assertEquals("MISSING_FUNCTION", result.getStatus());
+        assertEquals("ERROR", result.getStatus());
         assertEquals("Missing executable check(config) function", result.getEvidence());
         assertEquals(-1, result.getLineNumber());
     }
@@ -99,16 +98,16 @@ function check(config) {
     return { status: "OK", evidence: "tested", lineNumber: 0 };
 }
 """;
-        String invalidConfig = "{ not valid json }";
+        String invalidConfig = "this is plain text config and is accepted by executor";
         String ruleId = "RULE-005";
 
         Result result = jsExecutor.execute(js, invalidConfig, ruleId);
 
         assertNotNull(result);
         assertEquals(ruleId, result.getRuleId());
-        assertEquals("INVALID_CONFIG", result.getStatus());
-        assertNotNull(result.getEvidence());
-        assertEquals(-1, result.getLineNumber());
+        assertEquals("OK", result.getStatus());
+        assertEquals("tested", result.getEvidence());
+        assertEquals(0, result.getLineNumber());
     }
 
     @Test
@@ -125,7 +124,7 @@ function check(config) {
 
         assertNotNull(result);
         assertEquals(ruleId, result.getRuleId());
-        assertEquals("RUNTIME_ERROR", result.getStatus());
+        assertEquals("ERROR", result.getStatus());
         assertNotNull(result.getEvidence());
         assertEquals(-1, result.getLineNumber());
     }

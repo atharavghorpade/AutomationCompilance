@@ -1,12 +1,15 @@
 package com.compliance.automation.formatter;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
 @Service
 public class CISFormatter {
+
+	private static final Pattern DIRECT_INCLUDES_PATTERN = Pattern.compile("includes\\(\\s*[\\\"'](.+?)[\\\"']\\s*\\)");
+	private static final Pattern EXPECTED_VAR_PATTERN = Pattern.compile("const\\s+expectedCommand\\s*=\\s*[\\\"'](.+?)[\\\"']\\s*;");
 
 	public String format(String generatedJs) {
 		if (generatedJs == null || generatedJs.isBlank()) {
@@ -14,49 +17,47 @@ public class CISFormatter {
 		}
 
 		String normalized = normalize(generatedJs);
-		String body = extractBody(normalized);
+		String expectedCommand = extractExpectedCommand(normalized);
+		String escapedExpectedCommand = escapeForDoubleQuotedJsString(expectedCommand);
 
-		StringBuilder formatted = new StringBuilder();
-		formatted.append("function check(config) {").append(System.lineSeparator());
-
-		if (!body.isBlank()) {
-			List<String> lines = splitLines(body);
-			for (String line : lines) {
-				if (line.isBlank()) {
-					formatted.append(System.lineSeparator());
-				} else {
-					formatted.append("    ").append(line).append(System.lineSeparator());
-				}
-			}
-		}
-
-		formatted.append("}").append(System.lineSeparator());
-		return formatted.toString();
+		String lineSeparator = System.lineSeparator();
+		return "function check(config) {" + lineSeparator
+				+ "    const lines = config.split(\\\"\\n\\\");" + lineSeparator
+				+ lineSeparator
+				+ "    for (let i = 0; i < lines.length; i++) {" + lineSeparator
+				+ "        if (lines[i].includes(\\\"" + escapedExpectedCommand + "\\\")) {" + lineSeparator
+				+ "            return {" + lineSeparator
+				+ "                status: \\\"PASS\\\"," + lineSeparator
+				+ "                evidence: lines[i]," + lineSeparator
+				+ "                lineNumber: i + 1" + lineSeparator
+				+ "            };" + lineSeparator
+				+ "        }" + lineSeparator
+				+ "    }" + lineSeparator
+				+ lineSeparator
+				+ "    return {" + lineSeparator
+				+ "        status: \\\"FAIL\\\"," + lineSeparator
+				+ "        evidence: \\\"Not found\\\"," + lineSeparator
+				+ "        lineNumber: -1" + lineSeparator
+				+ "    };" + lineSeparator
+				+ "}" + lineSeparator;
 	}
 
-	private String extractBody(String jsCode) {
-		String signature = "function check(config)";
-		int signatureIndex = jsCode.indexOf(signature);
-
-		if (signatureIndex < 0) {
-			return trimOuterBraces(jsCode);
+	private String extractExpectedCommand(String jsCode) {
+		Matcher directMatcher = DIRECT_INCLUDES_PATTERN.matcher(jsCode);
+		if (directMatcher.find()) {
+			return directMatcher.group(1);
 		}
 
-		int openBrace = jsCode.indexOf('{', signatureIndex);
-		int closeBrace = jsCode.lastIndexOf('}');
-		if (openBrace < 0 || closeBrace <= openBrace) {
-			return trimOuterBraces(jsCode);
+		Matcher expectedVarMatcher = EXPECTED_VAR_PATTERN.matcher(jsCode);
+		if (expectedVarMatcher.find()) {
+			return expectedVarMatcher.group(1);
 		}
 
-		return jsCode.substring(openBrace + 1, closeBrace).trim();
+		throw new IllegalArgumentException("Generated JavaScript must contain includes(\"EXPECTED_COMMAND\") logic");
 	}
 
-	private String trimOuterBraces(String text) {
-		String trimmed = text.trim();
-		if (trimmed.startsWith("{") && trimmed.endsWith("}") && trimmed.length() > 2) {
-			return trimmed.substring(1, trimmed.length() - 1).trim();
-		}
-		return trimmed;
+	private String escapeForDoubleQuotedJsString(String value) {
+		return value.replace("\\", "\\\\").replace("\"", "\\\"");
 	}
 
 	private String normalize(String text) {
@@ -65,14 +66,5 @@ public class CISFormatter {
 				.replace("```js", "")
 				.replace("```", "");
 		return normalized.trim();
-	}
-
-	private List<String> splitLines(String text) {
-		String[] rawLines = text.split("\\n", -1);
-		List<String> lines = new ArrayList<>(rawLines.length);
-		for (String rawLine : rawLines) {
-			lines.add(rawLine == null ? "" : rawLine.strip());
-		}
-		return lines;
 	}
 }

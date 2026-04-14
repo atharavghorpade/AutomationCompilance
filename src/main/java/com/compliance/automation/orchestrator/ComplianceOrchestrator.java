@@ -14,6 +14,7 @@ import com.compliance.automation.exception.JsExecutionException;
 import com.compliance.automation.executor.JSExecutor;
 import com.compliance.automation.generator.JSGeneratorService;
 import com.compliance.automation.model.ExpectedResult;
+import com.compliance.automation.model.ComplianceType;
 import com.compliance.automation.model.Report;
 import com.compliance.automation.model.Result;
 import com.compliance.automation.model.Rule;
@@ -63,14 +64,23 @@ public class ComplianceOrchestrator {
 	}
 
 	public Report runCompliance(String config, List<ExpectedResult> expectedResults, MultipartFile pdfFile) {
+		return runCompliance(config, expectedResults, pdfFile, ComplianceType.CIS);
+	}
+
+	public Report runCompliance(String config,
+			List<ExpectedResult> expectedResults,
+			MultipartFile pdfFile,
+			ComplianceType complianceType) {
 		String safeConfig = config == null ? "" : config;
 		boolean pdfPresent = pdfFile != null && !pdfFile.isEmpty();
-		log.info("Starting compliance pipeline (configSize={}, pdfFilePresent={})",
+		ComplianceType safeComplianceType = complianceType == null ? ComplianceType.CIS : complianceType;
+		log.info("Starting compliance pipeline (configSize={}, pdfFilePresent={}, type={})",
 				safeConfig.length(),
-				pdfPresent);
+				pdfPresent,
+				safeComplianceType);
 
 		List<Rule> rules = resolveRulesForExecution(pdfFile, pdfPresent); // Step 1
-		Map<String, String> jsByRuleId = generateJavaScript(rules); // Step 2
+		Map<String, String> jsByRuleId = generateJavaScript(rules, safeComplianceType); // Step 2
 		List<Result> results = executeRules(jsByRuleId, safeConfig); // Step 3
 		List<ExpectedResult> safeExpectedResults = loadExpectedResults(expectedResults); // Step 4
 
@@ -80,7 +90,7 @@ public class ComplianceOrchestrator {
 		}
 
 		Report report = generateReport(results, safeExpectedResults); // Step 7
-		saveOutputs(jsByRuleId, report); // Step 8
+		saveOutputs(jsByRuleId, rules, report, safeComplianceType); // Step 8
 
 		log.info("Compliance pipeline completed (total={}, passed={}, failed={})",
 				report.getTotal(), report.getPassed(), report.getFailed());
@@ -135,9 +145,9 @@ public class ComplianceOrchestrator {
 		return defaultRules;
 	}
 
-	private Map<String, String> generateJavaScript(List<Rule> rules) {
+	private Map<String, String> generateJavaScript(List<Rule> rules, ComplianceType complianceType) {
 		log.info("Step 2: generating JavaScript checks for {} rules", rules.size());
-		Map<String, String> jsByRuleId = jsGeneratorService.generateCheckFunctions(rules);
+		Map<String, String> jsByRuleId = jsGeneratorService.generateCheckFunctions(rules, complianceType);
 		log.info("Step 2 completed: generated JavaScript functions for {} rules", jsByRuleId.size());
 		return jsByRuleId;
 	}
@@ -183,9 +193,9 @@ public class ComplianceOrchestrator {
 		return report;
 	}
 
-	private void saveOutputs(Map<String, String> jsByRuleId, Report report) {
+	private void saveOutputs(Map<String, String> jsByRuleId, List<Rule> rules, Report report, ComplianceType complianceType) {
 		log.info("Step 8: saving generated outputs");
-		saveGeneratedJavaScript(jsByRuleId);
+		saveGeneratedJavaScript(jsByRuleId, rules, complianceType);
 		String reportJson = reportGenerator.exportToJson(report);
 		fileStorageService.saveReport("report.json", reportJson);
 		log.info("Step 8 completed: outputs saved");
@@ -233,9 +243,17 @@ public class ComplianceOrchestrator {
 		}
 	}
 
-	private void saveGeneratedJavaScript(Map<String, String> jsByRuleId) {
+	private void saveGeneratedJavaScript(Map<String, String> jsByRuleId, List<Rule> rules, ComplianceType complianceType) {
+		Map<String, Rule> ruleById = new HashMap<>();
+		for (Rule rule : rules) {
+			if (rule != null && rule.getRuleId() != null && !rule.getRuleId().isBlank()) {
+				ruleById.put(rule.getRuleId(), rule);
+			}
+		}
+
 		for (Map.Entry<String, String> entry : jsByRuleId.entrySet()) {
-			fileStorageService.saveJavaScript(entry.getKey(), entry.getValue());
+			Rule rule = ruleById.get(entry.getKey());
+			fileStorageService.saveJavaScript(complianceType, rule, entry.getValue());
 		}
 	}
 }

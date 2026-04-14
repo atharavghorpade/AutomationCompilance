@@ -30,9 +30,9 @@ public class ComplianceRequestService {
     }
 
     public Report runFromBody(String config, String type) {
-        validateType(type);
+        ComplianceType complianceType = validateType(type);
         String safeConfig = config == null ? "" : config;
-        return complianceOrchestrator.runCompliance(safeConfig, List.of(), null);
+        return complianceOrchestrator.runCompliance(safeConfig, List.of(), null, complianceType);
     }
 
     public Report runWithFiles(MultipartFile configFile, MultipartFile expectedFile, MultipartFile pdfFile, String type) {
@@ -41,13 +41,15 @@ public class ComplianceRequestService {
         String config = readConfig(configFile);
         List<ExpectedResult> expectedResults = expectedResultLoader.load(expectedFile);
 
+        ComplianceType complianceType = validateType(type);
+
         log.info("Delegating compliance execution for type={}, configFile={}, expectedFile={}, pdfFilePresent={}",
-                ComplianceType.from(type),
+            complianceType,
                 configFile.getOriginalFilename(),
                 expectedFile.getOriginalFilename(),
                 pdfFile != null && !pdfFile.isEmpty());
 
-        return complianceOrchestrator.runCompliance(config, expectedResults, pdfFile);
+        return complianceOrchestrator.runCompliance(config, expectedResults, pdfFile, complianceType);
     }
 
     private String readConfig(MultipartFile configFile) {

@@ -1,7 +1,6 @@
 package com.compliance.automation.executor;
 
 import com.compliance.automation.model.Result;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.graalvm.polyglot.Context;
@@ -17,10 +16,7 @@ public class JSExecutor {
     private static final String CHECK_FUNCTION_NAME = "check";
     private static final String STATUS_ERROR = "ERROR";
 
-    private final ObjectMapper objectMapper;
-
-    public JSExecutor(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public JSExecutor() {
     }
 
     public Result execute(String jsCode, String config, String ruleId) {
@@ -51,8 +47,8 @@ public class JSExecutor {
             Result result = new Result(
                     ruleId,
                     extractString(executionResult, "status"),
-                    extractString(executionResult, "evidence"),
-                    extractInt(executionResult, "lineNumber"));
+                    extractStringOrFallback(executionResult, "evidence", "findingDetails"),
+                    extractIntOrFallback(executionResult, "lineNumber", "line"));
 
             if ("PASS".equalsIgnoreCase(result.getStatus())) {
                 log.debug("Execution result for ruleId={}: status={}, lineNumber={}",
@@ -97,6 +93,22 @@ public class JSExecutor {
             return (int) member.asLong();
         }
         return -1;
+    }
+
+    private String extractStringOrFallback(Value value, String primaryMemberName, String fallbackMemberName) {
+        String primaryValue = extractString(value, primaryMemberName);
+        if (primaryValue != null) {
+            return primaryValue;
+        }
+        return extractString(value, fallbackMemberName);
+    }
+
+    private int extractIntOrFallback(Value value, String primaryMemberName, String fallbackMemberName) {
+        int primaryValue = extractInt(value, primaryMemberName);
+        if (primaryValue != -1) {
+            return primaryValue;
+        }
+        return extractInt(value, fallbackMemberName);
     }
 
     private String truncate(String value) {
